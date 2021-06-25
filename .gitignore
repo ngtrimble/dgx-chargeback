@@ -99,4 +99,4 @@ ENV/
 .mypy_cache/
 
 # Remove Shell Tests
-src/tests/*.sh
+tests/

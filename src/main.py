@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Module Docstring
+DGX Chargeback Process
+
+Creates chargeback data for Slurm/DGX/Kubernetes clusters.
+
+This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
@@ -14,7 +18,12 @@ import database
 from datetime import datetime, time, timedelta
 import ssh
 
+
 def getDateRangeUnix(dayCount):
+    """
+    Get start/end range in UNIX timestamps for the last n days.
+    Range will always be from the previes midnight, to midnight n days ago
+    """
     thisMidnight = datetime.combine(datetime.today(), time.min)
     daysAgoMidnight = thisMidnight - timedelta(days=dayCount)
     dateRange = {
@@ -24,11 +33,17 @@ def getDateRangeUnix(dayCount):
     return dateRange
 
 def formatUnixToDateString(unixDate):
+    """
+    Format a UNIX time string to MySQL Datetime Format
+    """
     dt = datetime.fromtimestamp(unixDate)
     dateString = dt.strftime("%Y-%m-%d %H:%M:%S")
     return dateString
 
 def formatSlurmJobState(stateId):
+    """
+    Convert the Job State ID from Slurm acctdb to the friendly name
+    """
     states = {
         3: 'COMPLETED',
         5: 'FAILED'
@@ -38,7 +53,7 @@ def formatSlurmJobState(stateId):
 
 def parseSlurmJobs(jobs, sshHost):
     """
-    Parse the completed slurm jobs, and prepare them for insert into chargeback DB
+    Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
     """
     chargebackRecords = []
 
@@ -67,6 +82,7 @@ def parseSlurmJobs(jobs, sshHost):
         chargebackRecords.append(chargebackRecord)
     
     return chargebackRecords
+
 
 def main(args):
     """ Main entry point of the app """
@@ -112,7 +128,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Misc Args
-    parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 3))
+    parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 5))
 
     # Get the Slurm Args
     parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", ""))
@@ -140,14 +156,6 @@ if __name__ == "__main__":
     parser.add_argument("--email-smtp-port", default=environ.get("EMAIL_SMTP_PORT", ""))
     parser.add_argument("--email-to-address", default=environ.get("EMAIL_TO_ADDRESS", ""))
     parser.add_argument("--email-from-address", default=environ.get("EMAIL_FROM_ADDRESS", ""))
-
-    # Optional verbosity counter (eg. -v, -vv, -vvv, etc.)
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help="Verbosity (-v, -vv, etc)")
 
     # Specify output of "--version"
     parser.add_argument(

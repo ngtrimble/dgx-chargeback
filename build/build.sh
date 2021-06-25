@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker build -t kalenpeterson/dgx-chargeback:latest -f Dockerfile ../
+podman build -t docker.io/kalenpeterson/dgx-chargeback:latest -f build/Dockerfile .
 
-docker push kalenpeterson/dgx-chargeback:latest
+podman push docker.io/kalenpeterson/dgx-chargeback:latest

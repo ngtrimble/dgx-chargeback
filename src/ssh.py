@@ -2,6 +2,10 @@ from logzero import logger
 import base64
 import paramiko
 
+__author__ = "Kalen Peterson"
+__version__ = "0.1.0"
+__license__ = "MIT"
+
 class Ssh:
 
     def __init__(self, hostname, port, username, password):

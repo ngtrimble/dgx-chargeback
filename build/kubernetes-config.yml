@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: env-secret-dgx-chargeback
+data:
+  SLURM_DB_PASSWORD: 
+  CHARGEBACK_DB_PASSWORD: 
+  SSH_PASSWORD: 
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-config-dgx-chargeback
+data:
+  SLURM_JOB_PREV_DAYS: ""
+  SLURM_CLUSTER_NAME: ""
+  SLURM_DB_HOST: ""
+  SLURM_DB_PORT: ""
+  SLURM_DB_USERNAME: ""
+  CHARGEBACK_DB_HOST: ""
+  CHARGEBACK_DB_PORT: ""
+  CHARGEBACK_DB_SCHEMA_NAME: ""
+  CHARGEBACK_DB_TABLE_NAME: ""
+  CHARGEBACK_DB_USERNAME: ""
+  SSH_HOST: ""
+  SSH_PORT: ""
+  SSH_USERNAME: ""

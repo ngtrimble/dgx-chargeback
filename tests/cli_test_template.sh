@@ -1,6 +1,6 @@
 #!/bin/bash
 
-../chargeback.py \
+../src/main.py \
     --slurm-job-prev-day 3 \
     --slurm-cluster-name '' \
     --slurm-db-host '' \

@@ -1,6 +1,9 @@
 from logzero import logger
 import mysql.connector
 
+__author__ = "Kalen Peterson"
+__version__ = "0.1.0"
+__license__ = "MIT"
 
 class MySqlDb:
 

@@ -50,12 +50,19 @@ class MySqlDb:
         finally:
             cursor.close()
 
-    def writeManyQuery(self, query):
+    def insertQuery(self, query, params):
         """
-        Run a set of MySQL Queries at once, returning the number of rows effected
+        Run an insert query, returing the number of rows affected
         """
         cursor = self._cnx.cursor()
-        cursor.execute(query)
+        try:
+            cursor.execute(query, params)
+            self._cnx.commit()
+            count = cursor.rowcount
+
+            return count
+        finally:
+            cursor.close()
 
 
 class SlurmDb(MySqlDb):
@@ -68,7 +75,6 @@ class SlurmDb(MySqlDb):
         self._jobTable = str(slurmClusterName + '_job_table')
         logger.info("My Job Table is " + self._jobTable)
     
-
     def getJobsRange (self, startDate, endDate):
         """
         Get all jobs with time_end in a range
@@ -110,61 +116,38 @@ class ChargebackDb(MySqlDb):
         self._chargebackTable = str(chargebackTable)
         logger.info("My Job Table is " + self._chargebackTable)
 
-    def addChargebackJob (self):
+    def addUniqueJob (self, record):
         """
-        Insert a completed Job into the Chargeback DB
+        Insert a completed Job into the Chargeback DB, Must be a Uniuq Slurm Job ID
         """
-        fields = ", ".join([
-            "slurm_job_name",
-            "slurm_id_job",
-            "time_start",
-            "time_end",
-            "duration_sec",
-            "cpus_req",
-            "exit_code",
-            "user_id",
-            "group_id",
-            "user_name",
-            "group_name",
-            "nodelist",
-            "node_alloc",
-            "slurm_job_state",
-            "job_result",
-            "gpus_requested",
-            "gpus_used"
-        ])
+        
+        # Extract the Keys and Values (must corrospond to DB Columns)
+        fields = []
+        values = []
+        for key, value in record.items():
+            fields.append(key)
+            values.append(value)
 
-        values = ", ".join([
-            "slurm-job-99",
-            "99",
-            "2021-06-01 12:12:12.000",
-            "2021-06-01 12:12:13.000",
-            "1",
-            "2",
-            "0",
-            "1",
-            "1",
-            "kalen",
-            "kalen-group",
-            "dgx-1",
-            "1",
-            "5",
-            "success",
-            "2",
-            "2"
-        ])
-
-        fieldReplacers = ''
+        # Generate MySQL Replacers
+        fieldReplacers = ""
         for field in fields:
             fieldReplacers += "%s,"
 
-        query = "INSERT INTO " + self._chargebackTable + " (" + fields + ") VALUES (" + values + ")"
-        params = (
-            values
-        )
+        # Build and run Unique Check Query
+        checkQuery = "SELECT slurm_id_job from " + self._chargebackTable + " WHERE slurm_id_job = %s"
+        jobExists = self.readQuery(checkQuery, [record["slurm_id_job"]])
 
-        logger.info(query)
-        logger.info(params)
-        result = self.writeManyQuery(query)
+        # Build Insert Query
+        fieldReplacers = fieldReplacers.strip(",")
+        strFields = ", ".join(fields)
+        insertQuery = "INSERT INTO " + self._chargebackTable + " (" + strFields + ") VALUES (" + fieldReplacers + ")"
+       
+        if not jobExists:
 
-        return result
+            logger.debug(insertQuery)
+            logger.debug(values)
+            result = self.insertQuery(insertQuery, values)
+            logger.info("Updated: '" + str(result) + "' rows")
+
+        else:
+            logger.info("No Update needed, slurm_job_id=" + str(record["slurm_id_job"]) + " already exists")

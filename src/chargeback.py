@@ -12,29 +12,7 @@ import argparse
 from logzero import logger
 import database
 from datetime import datetime, time, timedelta
-
-# Slurm DB
-# - Establish Connection
-# - Get All Jobs completed in last n-days
-# - Get all required details
-#   - GPU is gres_reg or used
-#   - UID is id_user
-#   - SSH to node for usermap
-
-# Chargeback DB
-# - Establish Connection
-# - Insert Unique records in the last n-days
-
-# Notifications
-# - Email on terminating exception
-# - Email on completion
-
-# Parsing
-# - Read input from Slurm DB and parse into Chargeback format
-# - Get user and group names
-# - Get account name
-
-
+import ssh
 
 def getDateRangeUnix(dayCount):
     thisMidnight = datetime.combine(datetime.today(), time.min)
@@ -45,11 +23,54 @@ def getDateRangeUnix(dayCount):
     }
     return dateRange
 
+def formatUnixToDateString(unixDate):
+    dt = datetime.fromtimestamp(unixDate)
+    dateString = dt.strftime("%Y-%m-%d %H:%M:%S")
+    return dateString
+
+def formatSlurmJobState(stateId):
+    states = {
+        3: 'COMPLETED',
+        5: 'FAILED'
+    }
+    state = states.get(stateId, "UNKNOWN")
+    return state
+
+def parseSlurmJobs(jobs, sshHost):
+    """
+    Parse the completed slurm jobs, and prepare them for insert into chargeback DB
+    """
+    chargebackRecords = []
+
+    for job in jobs:
+        
+        chargebackRecord = {
+            "slurm_job_name":  job["job_name"],
+            "slurm_id_job":    job["id_job"],
+            "time_start":      formatUnixToDateString(job["time_start"]),
+            "time_end":        formatUnixToDateString(job["time_end"]),
+            "duration_sec":    int(job["time_end"] - job["time_start"]),
+            "cpus_req":        job["cpus_req"],
+            "exit_code":       job["exit_code"],
+            "user_id":         job["id_user"],
+            "group_id":        job["id_group"],
+            "user_name":       sshHost.mapUidtoUsername(job["id_user"]),
+            "group_name":      "???",
+            "nodelist":        job["nodelist"],
+            "node_alloc":      job["nodes_alloc"],
+            "slurm_job_state": job["state"],
+            "job_result":      formatSlurmJobState(job["state"]),
+            "gpus_requested":  int("0"+job["gres_req"]),
+            "gpus_used":       int("0"+job["gres_used"])
+        }
+
+        chargebackRecords.append(chargebackRecord)
+    
+    return chargebackRecords
 
 def main(args):
     """ Main entry point of the app """
-    logger.info("hello world")
-    logger.info(args)
+    logger.info("Starting DGX Chargeback Run")
 
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(
@@ -61,18 +82,28 @@ def main(args):
     chargebackDb = database.ChargebackDb(
         args.chargeback_db_table_name, args.chargeback_db_username,
         args.chargeback_db_password, args.chargeback_db_host, 
-        args.chargeback_db_port, args.chargeback_db_schema_name, )
+        args.chargeback_db_port, args.chargeback_db_schema_name)
 
-    # Get Day range in UNIX Time
+    # Setup the SSH Connection
+    sshHost = ssh.Ssh(
+        args.ssh_host, args.ssh_port, args.ssh_username, args.ssh_password)
+
+    # Get day range in UNIX Time
     dateRange = getDateRangeUnix(args.slurm_job_prev_days)
     
-    # Get Jobs in range from Slrum DB
+    # Get Jobs in range from Slurm DB
     jobs = slurmDb.getJobsRange(dateRange.get("start"), dateRange.get("end"))
-    logger.info(jobs)
+    logger.info("Found '" + str(len(jobs)) + "' completed jobs to insert")
 
-    # Insert Chargeback record
-    #chargebackDb.addChargebackJob()
+    # Format the data and get everything we need to insert into the Chargeback DB
+    chargebackRecords = parseSlurmJobs(jobs, sshHost)
 
+    # Insert Chargeback records
+    for record in chargebackRecords:
+        chargebackDb.addUniqueJob(record)
+
+    # Finish up
+    logger.info("Completed DGX Chargeback Run")
 
 
 
@@ -97,6 +128,12 @@ if __name__ == "__main__":
     parser.add_argument("--chargeback-db-table-name", default=environ.get("CHARGEBACK_DB_TABLE_NAME", ""))
     parser.add_argument("--chargeback-db-username", default=environ.get("CHARGEBACK_DB_USERNAME", ""))
     parser.add_argument("--chargeback-db-password", default=environ.get("CHARGEBACK_DB_PASSWORD", ""))
+
+    # SSH Connection Details
+    parser.add_argument("--ssh-host", default=environ.get("SSH_HOST", ""))
+    parser.add_argument("--ssh-port", default=environ.get("SSH_PORT", ""))
+    parser.add_argument("--ssh-username", default=environ.get("SSH_USERNAME", ""))
+    parser.add_argument("--ssh-password", default=environ.get("SSH_PASSWORD", ""))
 
     # Email Notifications
     parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", ""))

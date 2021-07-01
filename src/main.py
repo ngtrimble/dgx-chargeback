@@ -17,6 +17,7 @@ from logzero import logger
 import database
 from datetime import datetime, time, timedelta
 import ssh
+import notification
 
 
 def getDateRangeUnix(dayCount):
@@ -88,6 +89,12 @@ def main(args):
     """ Main entry point of the app """
     logger.info("Starting DGX Chargeback Run")
 
+    # Setup the Email Connection
+    emailHost = notification.Email(
+        args.email_smtp_username, args.email_smtp_password,
+        args.email_smtp_host, args.email_smtp_port,
+        args.email_from_address, args.email_to_address)
+
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(
         args.slurm_cluster_name, args.slurm_db_username,
@@ -119,6 +126,7 @@ def main(args):
         chargebackDb.addUniqueJob(record)
 
     # Finish up
+    emailHost.sendSuccess()
     logger.info("Completed DGX Chargeback Run")
 
 
@@ -154,6 +162,8 @@ if __name__ == "__main__":
     # Email Notifications
     parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", ""))
     parser.add_argument("--email-smtp-port", default=environ.get("EMAIL_SMTP_PORT", ""))
+    parser.add_argument("--email-smtp-username", default=environ.get("EMAIL_SMTP_USERNAME", ""))
+    parser.add_argument("--email-smtp-password", default=environ.get("EMAIL_SMTP_PASSWORD", ""))
     parser.add_argument("--email-to-address", default=environ.get("EMAIL_TO_ADDRESS", ""))
     parser.add_argument("--email-from-address", default=environ.get("EMAIL_FROM_ADDRESS", ""))
 

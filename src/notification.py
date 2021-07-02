@@ -40,7 +40,7 @@ class Email:
 
         self._mail\
             .subject("DGX Chargeback Success")\
-            .message("The DGX Chargeback process ran successfully and inserted '%s' completed jobs. \n See attached log for details." % (len(insertedRecords)))\
+            .message("The DGX Chargeback process ran successfully and inserted '%s' completed jobs.\n See attached log for details." % (len(insertedRecords)))\
             .attach(Path(logfile))
 
         self._send()
@@ -51,7 +51,7 @@ class Email:
         """
         self._mail\
             .subject("DGX Chargeback Failure")\
-            .message("The DGX Chargeback process faild to complete. See attached log for details.")\
+            .message("The DGX Chargeback process failed to complete.\nSee attached log for details.")\
             .attach(Path(logfile))
 
         self._send()

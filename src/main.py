@@ -53,6 +53,19 @@ def formatSlurmJobState(stateId):
     state = states.get(stateId, "UNKNOWN")
     return state
 
+def formatGpuCount(gpuCount):
+    """
+    Convert the GPU Count from the SLurm DB, to an int
+    The Slurm DB will store a string in the form "gpu:1" if a GPU was requested
+    If a GPU was not requested, it will be empty
+    """
+    if gpuCount:
+        intGpuCount = int("0"+gpuCount.split(":")[1])
+        return intGpuCount
+    else:
+        return int(0)
+
+
 def parseSlurmJobs(jobs, sshHost):
     """
     Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
@@ -77,8 +90,8 @@ def parseSlurmJobs(jobs, sshHost):
             "node_alloc":      job["nodes_alloc"],
             "slurm_job_state": job["state"],
             "job_result":      formatSlurmJobState(job["state"]),
-            "gpus_requested":  int("0"+job["gres_req"]),
-            "gpus_used":       int("0"+job["gres_used"])
+            "gpus_requested":  formatGpuCount(job["gres_req"]),
+            "gpus_used":       formatGpuCount(job["gres_used"]))
         }
 
         chargebackRecords.append(chargebackRecord)

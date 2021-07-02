@@ -94,8 +94,7 @@ class SlurmDb(MySqlDb):
             "nodelist",
             "nodes_alloc",
             "state",
-            "gres_req",
-            "gres_used"
+            "gres_req"
         ])
 
         query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE time_end BETWEEN %s AND %s"

@@ -26,3 +26,6 @@ spec:
             - secretRef:
                 name: env-secret-dgx-chargeback
           restartPolicy: Never
+          nodeSelector:
+             node-role.kubernetes.io/master: ""
+    kubernetes.io/hostname: ${KUBE_NODE}

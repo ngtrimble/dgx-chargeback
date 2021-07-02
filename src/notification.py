@@ -1,9 +1,9 @@
 from logzero import logger
-import smtplib
-from email.mime.text import MIMEText
+from envelope import Envelope
+from pathlib import Path
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT"
 
 class Email:
@@ -12,51 +12,47 @@ class Email:
         """
         Setup the SMTP Connection
         """
-        self._username = username
-        self._password = password
-        self._host = host
-        self._port = port
-        self._from = mailFrom
-        self._to = mailTo
+        self._mail = Envelope()\
+            .from_(mailFrom)\
+            .to(mailTo)
 
-    def sendSuccess(self):
+        if username and password:
+            self._mail.smtp(host, port, username, password)
+        else:
+            self._mail.smtp(host, port)
+
+    def _send(self):
         """
-        Send a Successfully Completee Email
+        Send a mail object and check the result
         """
-        reciever = "A Test User <to@example.com>"
-        sender = "Private Person <from@example.com>"
-        msg = MIMEText("The DGX Chargeback process ran successfully.")
-        msg['Subject'] = 'DGX Chargeback Success'
-        msg['From'] = self._from
-        msg['To'] = self._to
-    
-        logger.info("Sending Success Email notification")
-        with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+        result = self._mail.send()
 
-            if self._username and self._password:
-                server.login(self._username, self._password)
+        if bool(result):
+            logger.info("Successfully sent email")
+        else:
+            logger.error(str(result))
+            logger.error("Failed to send email")
 
-            server.sendmail(sender, reciever, msg.as_string())
-            logger.debug("Sent Email")
+    def sendSuccessReport(self, insertedRecords, logfile):
+        """
+        Send a Successfully Completed Email
+        """
 
-    def sendFailure(self, error):
+        self._mail\
+            .subject("DGX Chargeback Success")\
+            .message("The DGX Chargeback process ran successfully and inserted '%s' completed jobs. \n See attached log for details." % (len(insertedRecords)))\
+            .attach(Path(logfile))
+
+        self._send()
+
+    def sendFailureReport(self, logfile):
         """
         Send an exception Email
         """
-        reciever = "A Test User <to@example.com>"
-        sender = "Private Person <from@example.com>"
-        msg = MIMEText("The DGX Chargeback process faild to complete")
-        msg['Subject'] = 'DGX Chargeback Failure'
-        msg['From'] = self._from
-        msg['To'] = self._to
-    
-        logger.info("Sending Success Email notification")
-        with smtplib.SMTP("smtp.mailtrap.io", 2525) as server:
+        self._mail\
+            .subject("DGX Chargeback Failure")\
+            .message("The DGX Chargeback process faild to complete. See attached log for details.")\
+            .attach(Path(logfile))
 
-            if self._username and self._password:
-                server.login(self._username, self._password)
+        self._send()
 
-            server.sendmail(sender, reciever, msg.as_string())
-            logger.debug("Sent Email")
-
-        

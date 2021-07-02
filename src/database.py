@@ -2,7 +2,7 @@ from logzero import logger
 import mysql.connector
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT"
 
 class MySqlDb:
@@ -18,13 +18,9 @@ class MySqlDb:
             logger.info("Connecting to MySQL DB: " + host)
             self._cnx = mysql.connector.connect(user=username, password=password,
                                                host=host, port=port, database=database)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                logger.error("Something is wrong with your user name or password")
-            elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                logger.error("Database does not exist")
-            else:
-                logger.error(err)
+        except Exception as err:
+            logger.error(err)
+            raise Exception("Failed to connect to MySQL database")
 
     def __del__(self):
         """
@@ -150,6 +146,8 @@ class ChargebackDb(MySqlDb):
             logger.debug(values)
             result = self.insertQuery(insertQuery, values)
             logger.info("Updated: '" + str(result) + "' rows")
+            return True
 
         else:
             logger.info("No Update needed, slurm_job_id=" + str(record["slurm_id_job"]) + " already exists")
+            return False

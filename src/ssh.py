@@ -3,7 +3,7 @@ import base64
 import paramiko
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT"
 
 class Ssh:
@@ -16,8 +16,12 @@ class Ssh:
         self._client = paramiko.SSHClient()
         self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        logger.info("Connecting to SSH Server: " + hostname)
-        self._client.connect(hostname, port, username, password)
+        try:
+            logger.info("Connecting to SSH Server: " + hostname)
+            self._client.connect(hostname, port, username, password)
+        except Exception as err:
+            logger.error(err)
+            raise Exception("Failed to connect to SSH Server")
 
     def __del__(self):
         """
@@ -45,4 +49,4 @@ class Ssh:
             return str(user)
         else:
             logger.error(error)
-            raise ValueError('Failed to map UID to user')
+            raise Exception('Failed to map UID to user')

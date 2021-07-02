@@ -8,19 +8,22 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __license__ = "MIT"
 
 from os import environ
 import sys
 import argparse
+import logzero
 from logzero import logger
 import database
 from datetime import datetime, time, timedelta
 import ssh
 import notification
 
-
+"""
+Define Utility functions for Main
+"""
 def getDateRangeUnix(dayCount):
     """
     Get start/end range in UNIX timestamps for the last n days.
@@ -73,7 +76,6 @@ def parseSlurmJobs(jobs, sshHost):
     chargebackRecords = []
 
     for job in jobs:
-        
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],
             "slurm_id_job":    job["id_job"],
@@ -93,7 +95,6 @@ def parseSlurmJobs(jobs, sshHost):
             "gpus_requested":  formatGpuCount(job["gres_req"]),
             "gpus_used":       formatGpuCount(job["gres_req"])
         }
-
         chargebackRecords.append(chargebackRecord)
     
     return chargebackRecords
@@ -101,48 +102,57 @@ def parseSlurmJobs(jobs, sshHost):
 
 def main(args):
     """ Main entry point of the app """
+    logzero.logfile("/tmp/chargeback.log", mode="w")
     logger.info("Starting DGX Chargeback Run")
 
-    # Setup the Email Connection
-    emailHost = notification.Email(
-        args.email_smtp_username, args.email_smtp_password,
-        args.email_smtp_host, args.email_smtp_port,
-        args.email_from_address, args.email_to_address)
+    try:
+        # Setup the Email Connection
+        emailHost = notification.Email(
+            args.email_smtp_username, args.email_smtp_password,
+            args.email_smtp_host, args.email_smtp_port,
+            args.email_from_address, args.email_to_address)
 
-    # Setup the Slurm DB
-    slurmDb = database.SlurmDb(
-        args.slurm_cluster_name, args.slurm_db_username,
-        args.slurm_db_password, args.slurm_db_host, 
-        args.slurm_db_port, 'slurm_acct_db')
+        # Setup the Slurm DB
+        slurmDb = database.SlurmDb(
+            args.slurm_cluster_name, args.slurm_db_username,
+            args.slurm_db_password, args.slurm_db_host, 
+            args.slurm_db_port, 'slurm_acct_db')
 
-    # Setup the Chargeback DB
-    chargebackDb = database.ChargebackDb(
-        args.chargeback_db_table_name, args.chargeback_db_username,
-        args.chargeback_db_password, args.chargeback_db_host, 
-        args.chargeback_db_port, args.chargeback_db_schema_name)
+        # Setup the Chargeback DB
+        chargebackDb = database.ChargebackDb(
+            args.chargeback_db_table_name, args.chargeback_db_username,
+            args.chargeback_db_password, args.chargeback_db_host, 
+            args.chargeback_db_port, args.chargeback_db_schema_name)
 
-    # Setup the SSH Connection
-    sshHost = ssh.Ssh(
-        args.ssh_host, args.ssh_port, args.ssh_username, args.ssh_password)
+        # Setup the SSH Connection
+        sshHost = ssh.Ssh(
+            args.ssh_host, args.ssh_port, args.ssh_username, args.ssh_password)
 
-    # Get day range in UNIX Time
-    dateRange = getDateRangeUnix(args.slurm_job_prev_days)
-    
-    # Get Jobs in range from Slurm DB
-    jobs = slurmDb.getJobsRange(dateRange.get("start"), dateRange.get("end"))
-    logger.info("Found '" + str(len(jobs)) + "' completed jobs to insert")
+        # Get day range in UNIX Time
+        dateRange = getDateRangeUnix(args.slurm_job_prev_days)
+        
+        # Get Jobs in range from Slurm DB
+        jobs = slurmDb.getJobsRange(dateRange.get("start"), dateRange.get("end"))
+        logger.info("Found '" + str(len(jobs)) + "' completed jobs to insert")
 
-    # Format the data and get everything we need to insert into the Chargeback DB
-    chargebackRecords = parseSlurmJobs(jobs, sshHost)
+        # Format the data and get everything we need to insert into the Chargeback DB
+        chargebackRecords = parseSlurmJobs(jobs, sshHost)
 
-    # Insert Chargeback records
-    for record in chargebackRecords:
-        chargebackDb.addUniqueJob(record)
+        # Insert Chargeback records
+        insertedRecords = []
+        for record in chargebackRecords:
+            if chargebackDb.addUniqueJob(record):
+                insertedRecords.append(record)
 
-    # Finish up
-    #emailHost.sendSuccess()
-    logger.info("Completed DGX Chargeback Run")
+        # Finish up
+        logger.info("Completed DGX Chargeback Run")
+        emailHost.sendSuccessReport(insertedRecords, "/tmp/chargeback.log")
 
+    except Exception as err:
+        logger.error(err)
+        logger.error("DGX Chargeback Run Failed")
+        emailHost.sendFailureReport("/tmp/chargeback.log")
+        
 
 if __name__ == "__main__":
     """ This is executed when run from the command line """

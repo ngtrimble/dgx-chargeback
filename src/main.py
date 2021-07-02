@@ -91,7 +91,7 @@ def parseSlurmJobs(jobs, sshHost):
             "slurm_job_state": job["state"],
             "job_result":      formatSlurmJobState(job["state"]),
             "gpus_requested":  formatGpuCount(job["gres_req"]),
-            "gpus_used":       formatGpuCount(job["gres_used"]))
+            "gpus_used":       formatGpuCount(job["gres_req"])
         }
 
         chargebackRecords.append(chargebackRecord)

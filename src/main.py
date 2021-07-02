@@ -12,6 +12,7 @@ __version__ = "0.1.0"
 __license__ = "MIT"
 
 from os import environ
+import sys
 import argparse
 from logzero import logger
 import database
@@ -126,9 +127,8 @@ def main(args):
         chargebackDb.addUniqueJob(record)
 
     # Finish up
-    emailHost.sendSuccess()
+    #emailHost.sendSuccess()
     logger.info("Completed DGX Chargeback Run")
-
 
 
 if __name__ == "__main__":

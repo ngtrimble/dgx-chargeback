@@ -28,4 +28,3 @@ spec:
           restartPolicy: Never
           nodeSelector:
              node-role.kubernetes.io/master: ""
-    kubernetes.io/hostname: ${KUBE_NODE}

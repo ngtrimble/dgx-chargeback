@@ -17,6 +17,7 @@ CREATE TABLE `gpu_usage` (
 	`job_result` CHAR(12) NOT NULL COMMENT 'End result of job' COLLATE 'latin1_swedish_ci',
 	`gpus_requested` INT(2) NULL DEFAULT '0' COMMENT 'Number of GPUs Requested',
 	`gpus_used` INT(2) NULL DEFAULT '0' COMMENT 'Number of GPUs Used',
+	`added` DATETIME NULL DEFAULT CURRENT_TIMESTAMP 'Datetime when this record was added',
 	PRIMARY KEY (`job_id`) USING BTREE
 )
 COLLATE='latin1_swedish_ci'

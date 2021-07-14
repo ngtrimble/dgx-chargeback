@@ -20,6 +20,7 @@ import database
 from datetime import datetime, time, timedelta
 import ssh
 import notification
+import re
 
 """
 Define Utility functions for Main
@@ -68,6 +69,26 @@ def formatGpuCount(gpuCount):
     else:
         return int(0)
 
+def getUserGroupname(sshHost, accountName, uid):
+    """
+    Get the GroupName for a user
+    If account is not root or NULL, use that.
+    If account is root or NULL, get the group list from SSH Host, and extract it
+    """
+    if accountName and accountName != "root":
+        return str(accountName)
+    else:
+        allGroups = sshHost.mapUidtoGroups(uid)
+        r = re.compile("^.+-G$")
+        filteredGroups = list(filter(r.match, allGroups))
+
+        if filteredGroups:
+            return str(filteredGroups[0])
+        else:
+            logger.error("Failed to map UID: %s to Group ending in '-G'" % (uid))
+            return str("UNKNOWN")
+
+
 
 def parseSlurmJobs(jobs, sshHost):
     """
@@ -87,7 +108,7 @@ def parseSlurmJobs(jobs, sshHost):
             "user_id":         job["id_user"],
             "group_id":        job["id_group"],
             "user_name":       sshHost.mapUidtoUsername(job["id_user"]),
-            "group_name":      "???",
+            "group_name":      getUserGroupname(sshHost,job["account"],job["id_user"]),
             "nodelist":        job["nodelist"],
             "node_alloc":      job["nodes_alloc"],
             "slurm_job_state": job["state"],

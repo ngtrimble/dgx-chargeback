@@ -50,3 +50,20 @@ class Ssh:
         else:
             logger.error(error)
             raise Exception('Failed to map UID to user')
+
+    def mapUidtoGroups(self, uid):
+        """
+        Connect to the host and map a UID to a list of member groups
+        """
+
+        # Run the SSH Command and decode the response
+        stdin, stdout, stderr = self._client.exec_command("id -Gn " + str(uid))
+        error = stderr.read().decode('ascii').strip('\n')
+        groups = stdout.read().decode('ascii').strip('\n')
+        
+        if not error:
+            groupList = groups.split(" ")
+            return groupList
+        else:
+            logger.error(error)
+            raise Exception('Failed to get Group list from UID')

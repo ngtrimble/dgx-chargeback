@@ -75,7 +75,7 @@ def getUserGroupname(sshHost, accountName, uid):
     If account is not root or NULL, use that.
     If account is root or NULL, get the group list from SSH Host, and extract it
     """
-    if accountName and accountName != "root":
+    if accountName:
         return str(accountName)
     else:
         allGroups = sshHost.mapUidtoGroups(uid)

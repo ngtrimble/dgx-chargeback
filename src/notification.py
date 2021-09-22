@@ -1,9 +1,11 @@
 from logzero import logger
 from envelope import Envelope
 from pathlib import Path
+import time
+import timeout_decorator
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.1"
+__version__ = "0.2.5"
 __license__ = "MIT"
 
 class Email:
@@ -16,15 +18,20 @@ class Email:
             .from_(mailFrom)\
             .to(mailTo)
 
+        logger.info("Setting up SMTP Connection")
         if username and password:
+            logger.info("Username and Password provided, SMTP authentication will be used")
             self._mail.smtp(host, port, username, password)
         else:
+            logger.info("No Username and Password provided, SMTP authentication will not be used")
             self._mail.smtp(host, port)
 
+    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SMTP Send Timeout (30 seconds)")
     def _send(self):
         """
         Send a mail object and check the result
         """
+        logger.info("Attempting to send Email")
         result = self._mail.send()
 
         if bool(result):

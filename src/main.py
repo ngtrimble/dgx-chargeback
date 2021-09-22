@@ -8,7 +8,7 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.1"
+__version__ = "0.2.5"
 __license__ = "MIT"
 
 from os import environ
@@ -78,7 +78,13 @@ def getUserGroupname(sshHost, accountName, uid):
     if accountName:
         return str(accountName)
     else:
-        allGroups = sshHost.mapUidtoGroups(uid)
+        allGroups = []
+        try:
+            allGroups = sshHost.mapUidtoGroups(uid)
+        except Exception as err:
+            logger.error(err)
+            pass
+
         r = re.compile("^.+-G$")
         filteredGroups = list(filter(r.match, allGroups))
 
@@ -88,14 +94,28 @@ def getUserGroupname(sshHost, accountName, uid):
             logger.error("Failed to map UID: %s to Group ending in '-G'" % (uid))
             return str("UNKNOWN")
 
+def getUsername(sshHost, uid):
+    """
+    Get the Username for a user by UID
+    """
+    username = None
+    try:
+        username = sshHost.mapUidtoUsername(uid)
+    except Exception as err:
+        logger.error(err)
+        pass
 
+    if username is None:
+        logger.error("Failed to map UID: %s to Username" % (uid))
+        username = 'UNKOWN'
+
+    return username
 
 def parseSlurmJobs(jobs, sshHost):
     """
     Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
     """
     chargebackRecords = []
-
     for job in jobs:
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],
@@ -107,7 +127,7 @@ def parseSlurmJobs(jobs, sshHost):
             "exit_code":       job["exit_code"],
             "user_id":         job["id_user"],
             "group_id":        job["id_group"],
-            "user_name":       sshHost.mapUidtoUsername(job["id_user"]),
+            "user_name":       getUsername(sshHost,job["id_user"]),
             "group_name":      getUserGroupname(sshHost,job["account"],job["id_user"]),
             "nodelist":        job["nodelist"],
             "node_alloc":      job["nodes_alloc"],
@@ -119,7 +139,6 @@ def parseSlurmJobs(jobs, sshHost):
         chargebackRecords.append(chargebackRecord)
     
     return chargebackRecords
-
 
 def main(args):
     """ Main entry point of the app """
@@ -157,9 +176,12 @@ def main(args):
         logger.info("Found '" + str(len(jobs)) + "' completed jobs to insert")
 
         # Format the data and get everything we need to insert into the Chargeback DB
+        logger.debug("Start parsing chargeback jobs")
         chargebackRecords = parseSlurmJobs(jobs, sshHost)
+        logger.debug("Completed parsing chargeback jobs")
 
         # Insert Chargeback records
+        logger.debug("Start inserting jobs into chargeback Database")
         insertedRecords = []
         for record in chargebackRecords:
             if chargebackDb.addUniqueJob(record):
@@ -170,7 +192,7 @@ def main(args):
         emailHost.sendSuccessReport(insertedRecords, "/tmp/chargeback.log")
 
     except Exception as err:
-        logger.error(err)
+        logger.error('Encountered Exception: "{}"'.format(err))
         logger.error("DGX Chargeback Run Failed")
         emailHost.sendFailureReport("/tmp/chargeback.log")
         

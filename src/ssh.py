@@ -1,9 +1,10 @@
 from logzero import logger
-import base64
 import paramiko
+import time
+import timeout_decorator
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.1"
+__version__ = "0.2.5"
 __license__ = "MIT"
 
 class Ssh:
@@ -19,6 +20,7 @@ class Ssh:
         try:
             logger.info("Connecting to SSH Server: " + hostname)
             self._client.connect(hostname, port, username, password)
+            logger.info("Sucessfully connected to SSH Server: " + hostname)
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to connect to SSH Server")
@@ -35,6 +37,7 @@ class Ssh:
             logger.warning("Failed to cleanly close the SSH Connection")
             pass
 
+    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SSH Timeout (30 seconds)")
     def mapUidtoUsername(self, uid):
         """
         Connect to the host and map a UID to Username
@@ -51,6 +54,7 @@ class Ssh:
             logger.error(error)
             raise Exception('Failed to map UID to user')
 
+    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SSH Timeout (30 seconds)")
     def mapUidtoGroups(self, uid):
         """
         Connect to the host and map a UID to a list of member groups
@@ -60,7 +64,7 @@ class Ssh:
         stdin, stdout, stderr = self._client.exec_command("id -Gn " + str(uid))
         error = stderr.read().decode('ascii').strip('\n')
         groups = stdout.read().decode('ascii').strip('\n')
-        
+
         if not error:
             groupList = groups.split(" ")
             return groupList

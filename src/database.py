@@ -2,7 +2,7 @@ from logzero import logger
 import mysql.connector
 
 __author__ = "Kalen Peterson"
-__version__ = "0.1.1"
+__version__ = "0.2.5"
 __license__ = "MIT"
 
 class MySqlDb:

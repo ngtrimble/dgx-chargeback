@@ -12,7 +12,6 @@ __version__ = "0.3.0"
 __license__ = "MIT"
 
 from os import environ
-import sys
 import argparse
 import logzero
 from logzero import logger
@@ -75,7 +74,7 @@ def getUserGroupname(sshHost, accountName, username):
     If account is not root or NULL, use that.
     If account is root or NULL, get the group list from SSH Host, and extract it
     """
-    if not accountName:
+    if accountName:
         return str(accountName)
     else:
         allGroups = []

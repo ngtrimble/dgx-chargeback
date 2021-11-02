@@ -57,7 +57,7 @@ class Ssh:
             os.remove('/tmp/passwd')
             os.remove('/tmp/group')
         except:
-            logger.warning("Failed to cleanup temporary files")
+            logger.warning("Failed to cleanup temporary files. This is OK")
             pass
 
     @timeout_decorator.timeout(60, timeout_exception=TimeoutError, exception_message="SCP Timeout (60 seconds)")

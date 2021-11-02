@@ -8,7 +8,7 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __license__ = "MIT"
 
 from os import environ
@@ -69,18 +69,18 @@ def formatGpuCount(gpuCount):
     else:
         return int(0)
 
-def getUserGroupname(sshHost, accountName, uid):
+def getUserGroupname(sshHost, accountName, username):
     """
     Get the GroupName for a user
     If account is not root or NULL, use that.
     If account is root or NULL, get the group list from SSH Host, and extract it
     """
-    if accountName:
+    if not accountName:
         return str(accountName)
     else:
         allGroups = []
         try:
-            allGroups = sshHost.mapUidtoGroups(uid)
+            allGroups = sshHost.mapUsernametoGroups(username)
         except Exception as err:
             logger.error(err)
             pass
@@ -91,7 +91,7 @@ def getUserGroupname(sshHost, accountName, uid):
         if filteredGroups:
             return str(filteredGroups[0])
         else:
-            logger.error("Failed to map UID: %s to Group ending in '-G'" % (uid))
+            logger.error("Failed to map UID: %s to Group ending in '-G'" % (username))
             return str("UNKNOWN")
 
 def getUsername(sshHost, uid):
@@ -117,24 +117,34 @@ def parseSlurmJobs(jobs, sshHost):
     """
     chargebackRecords = []
     for job in jobs:
+
+        time_start     = formatUnixToDateString(job["time_start"])
+        time_end       = formatUnixToDateString(job["time_end"])
+        duration_sec   = int(job["time_end"] - job["time_start"])
+        user_name      = getUsername(sshHost,job["id_user"])
+        group_name     = getUserGroupname(sshHost,job["account"],user_name)
+        job_result     = formatSlurmJobState(job["state"])
+        gpus_requested = formatGpuCount(job["gres_req"])
+        gpus_used      = formatGpuCount(job["gres_req"])
+
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],
             "slurm_id_job":    job["id_job"],
-            "time_start":      formatUnixToDateString(job["time_start"]),
-            "time_end":        formatUnixToDateString(job["time_end"]),
-            "duration_sec":    int(job["time_end"] - job["time_start"]),
+            "time_start":      time_start,
+            "time_end":        time_end,
+            "duration_sec":    duration_sec,
             "cpus_req":        job["cpus_req"],
             "exit_code":       job["exit_code"],
             "user_id":         job["id_user"],
             "group_id":        job["id_group"],
-            "user_name":       getUsername(sshHost,job["id_user"]),
-            "group_name":      getUserGroupname(sshHost,job["account"],job["id_user"]),
+            "user_name":       user_name,
+            "group_name":      group_name,
             "nodelist":        job["nodelist"],
             "node_alloc":      job["nodes_alloc"],
             "slurm_job_state": job["state"],
-            "job_result":      formatSlurmJobState(job["state"]),
-            "gpus_requested":  formatGpuCount(job["gres_req"]),
-            "gpus_used":       formatGpuCount(job["gres_req"])
+            "job_result":      job_result,
+            "gpus_requested":  gpus_requested,
+            "gpus_used":       gpus_used
         }
         chargebackRecords.append(chargebackRecord)
     

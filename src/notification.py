@@ -5,7 +5,7 @@ import time
 import timeout_decorator
 
 __author__ = "Kalen Peterson"
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __license__ = "MIT"
 
 class Email:

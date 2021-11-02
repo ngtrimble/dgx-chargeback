@@ -6,11 +6,12 @@ import timeout_decorator
 import os
 
 __author__ = "Kalen Peterson"
-__version__ = "0.2.5"
+__version__ = "0.3.0"
 __license__ = "MIT"
 
 class Ssh:
 
+    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SSH Timeout (30 seconds)")
     def __init__(self, hostname, port, username, password):
         """
         Initialize the Connection to SSH Server
@@ -67,30 +68,35 @@ class Ssh:
 
         logger.info("Collecting /etc/passwd and /etc/group from SSH Host")
 
+        # Get /etc/passwd
         try:
             self._scp.get('/etc/passwd','/tmp/passwd')
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to get /etc/passwd file with SCP")
 
+        # Parse /etc/passwd
         if os.path.isfile('/tmp/passwd'):
             with open('/tmp/passwd') as f:
                 self._passwd  = f.read().splitlines()
         else:
             raise Exception("Failed to read contents of passwd, /tmp/passwd does not exist")
 
+        # Get /etc/group
         try:
             self._scp.get('/etc/group','/tmp/group')
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to get /etc/group file with SCP")
 
+        # Parse /etc/group
         if os.path.isfile('/tmp/group'):
             with open('/tmp/group') as f:
                 self._group  = f.read().splitlines()
         else:
             raise Exception("Failed to read contents of group, /tmp/group does not exist")
 
+        # Validate passwd and group
         if not self._passwd:
             raise Exception("passwd is empty")
 
@@ -100,37 +106,43 @@ class Ssh:
         logger.debug("Found '{}' users in /etc/passwd, and '{}' groups in /etc/group".format(len(self._passwd),len(self._group)))
 
 
-    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SSH Timeout (30 seconds)")
     def mapUidtoUsername(self, uid):
         """
-        Connect to the host and map a UID to Username
+        Map the UID to Username via the collected /etc/passwd file
         """
 
-        # Run the SSH Command and decode the response
-        stdin, stdout, stderr = self._client.exec_command("id -nu " + str(uid))
-        error = stderr.read().decode('ascii').strip('\n')
-        user = stdout.read().decode('ascii').strip('\n')
+        username = None
+        for line in self._passwd:
+            split_line = line.split(':')
+            user_id = str(split_line[2])
+            user_name = str(split_line[0])
+
+            if user_id == str(uid):
+                username = user_name
+                break
         
-        if not error:
-            return str(user)
+        if username:
+            return str(username)
         else:
-            logger.error(error)
             raise Exception('Failed to map UID to user')
 
-    @timeout_decorator.timeout(30, timeout_exception=TimeoutError, exception_message="SSH Timeout (30 seconds)")
-    def mapUidtoGroups(self, uid):
+    def mapUsernametoGroups(self, username):
         """
-        Connect to the host and map a UID to a list of member groups
+        Map the Username to a list of member groups via the collected /etc/group file
         """
 
-        # Run the SSH Command and decode the response
-        stdin, stdout, stderr = self._client.exec_command("id -Gn " + str(uid))
-        error = stderr.read().decode('ascii').strip('\n')
-        groups = stdout.read().decode('ascii').strip('\n')
+        groups = []
+        for line in self._group:
+            split_line = line.split(':')
+            group_name = str(split_line[0])
+            group_members = str(split_line[3])
 
-        if not error:
-            groupList = groups.split(" ")
-            return groupList
+            if group_members:
+                split_group_members = group_members.split(',')
+                if str(username) in split_group_members:
+                    groups.append(group_name)
+
+        if groups:
+            return groups
         else:
-            logger.error(error)
-            raise Exception('Failed to get Group list from UID')
+            raise Exception('Failed to map UID to member groups')

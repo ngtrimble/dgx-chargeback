@@ -167,6 +167,7 @@ def main(args):
         # Setup the SSH Connection
         sshHost = ssh.Ssh(
             args.ssh_host, args.ssh_port, args.ssh_username, args.ssh_password)
+        sshHost.getUsersAndGroups()
 
         # Get day range in UNIX Time
         dateRange = getDateRangeUnix(args.slurm_job_prev_days)

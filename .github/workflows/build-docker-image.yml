@@ -17,7 +17,7 @@ jobs:
 
   build-image:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Docker Login
@@ -32,4 +32,4 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: "${{ env.IMAGE_NAME }}:${{ github.run_number }},${{ env.IMAGE_NAME }}:latest"
+        tags: "${{ env.IMAGE_NAME }}:build-${{ github.run_number }},${{ env.IMAGE_NAME }}:latest"

@@ -1,8 +1,8 @@
 logzero~=1.7.0
-mysql-connector-python~=8.0.23
-paramiko~=2.7.2
-python-magic~=0.4.24
-envelope~=1.5.3
-certifi>=2021.5.30
+mysql-connector-python~=8.0.29
+paramiko~=2.10.5
+python-magic~=0.4.26
+envelope~=1.5.4
+certifi>=2022.5.18.1
 timeout-decorator~=0.5.0
-scp~=0.14.1
+scp~=0.14.4

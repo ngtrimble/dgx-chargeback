@@ -95,6 +95,7 @@ class SlurmDb(MySqlDb):
         ])
 
         query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE time_end BETWEEN %s AND %s"
+        logger.debug("Running SlurmDb Query: '{}'".format(query))
         params = (
             startDate,
             endDate

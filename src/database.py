@@ -17,7 +17,8 @@ class MySqlDb:
         try:
             logger.info("Connecting to MySQL DB: " + host)
             self._cnx = mysql.connector.connect(user=username, password=password,
-                                               host=host, port=port, database=database)
+                                               host=host, port=port, database=database,
+                                               get_warnings=True)
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to connect to MySQL database")

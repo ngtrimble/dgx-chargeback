@@ -179,9 +179,12 @@ def main(args):
         sshHost.getUsersAndGroups()
 
         # Get day range in UNIX Time
+        logger.info("Looking for completed Slurm jobs in the past '{}' days".format(args.slurm_job_prev_days))
         dateRange = getDateRangeUnix(args.slurm_job_prev_days)
+        logger.debug("Calulated Date-Range in unixtime is '{}' to '{}'".format(dateRange.get("start"), dateRange.get("end")))
         
         # Get Jobs in range from Slurm DB
+        logger.debug("Collecting Jobs from SlurmDb in daterange")
         jobs = slurmDb.getJobsRange(dateRange.get("start"), dateRange.get("end"))
         logger.info("Found '" + str(len(jobs)) + "' completed jobs to insert")
 

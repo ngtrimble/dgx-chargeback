@@ -1,7 +1,6 @@
 from logzero import logger
 import paramiko
 from scp import SCPClient
-import time
 import timeout_decorator
 import os
 

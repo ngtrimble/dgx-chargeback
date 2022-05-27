@@ -1,7 +1,6 @@
 from logzero import logger
 from envelope import Envelope
 from pathlib import Path
-import time
 import timeout_decorator
 
 __author__ = "Kalen Peterson"

@@ -215,36 +215,36 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Misc Args
-    parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 5))
+    parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 5).strip())
 
     # Get the Slurm Args
-    parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", ""))
-    parser.add_argument("--slurm-db-host", default=environ.get("SLURM_DB_HOST", ""))
-    parser.add_argument("--slurm-db-port", default=environ.get("SLURM_DB_PORT", ""))
-    parser.add_argument("--slurm-db-username", default=environ.get("SLURM_DB_USERNAME", ""))
-    parser.add_argument("--slurm-db-password", default=environ.get("SLURM_DB_PASSWORD", ""))
+    parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", "").strip())
+    parser.add_argument("--slurm-db-host", default=environ.get("SLURM_DB_HOST", "").strip())
+    parser.add_argument("--slurm-db-port", default=environ.get("SLURM_DB_PORT", "").strip())
+    parser.add_argument("--slurm-db-username", default=environ.get("SLURM_DB_USERNAME", "").strip())
+    parser.add_argument("--slurm-db-password", default=environ.get("SLURM_DB_PASSWORD", "").strip())
 
     # Get Chargeback DB Args
-    parser.add_argument("--chargeback-db-host", default=environ.get("CHARGEBACK_DB_HOST", ""))
-    parser.add_argument("--chargeback-db-port", default=environ.get("CHARGEBACK_DB_PORT", ""))
-    parser.add_argument("--chargeback-db-schema-name", default=environ.get("CHARGEBACK_DB_SCHEMA_NAME", ""))
-    parser.add_argument("--chargeback-db-table-name", default=environ.get("CHARGEBACK_DB_TABLE_NAME", ""))
-    parser.add_argument("--chargeback-db-username", default=environ.get("CHARGEBACK_DB_USERNAME", ""))
-    parser.add_argument("--chargeback-db-password", default=environ.get("CHARGEBACK_DB_PASSWORD", ""))
+    parser.add_argument("--chargeback-db-host", default=environ.get("CHARGEBACK_DB_HOST", "").strip())
+    parser.add_argument("--chargeback-db-port", default=environ.get("CHARGEBACK_DB_PORT", "").strip())
+    parser.add_argument("--chargeback-db-schema-name", default=environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip())
+    parser.add_argument("--chargeback-db-table-name", default=environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip())
+    parser.add_argument("--chargeback-db-username", default=environ.get("CHARGEBACK_DB_USERNAME", "").strip())
+    parser.add_argument("--chargeback-db-password", default=environ.get("CHARGEBACK_DB_PASSWORD", "").strip())
 
     # SSH Connection Details
-    parser.add_argument("--ssh-host", default=environ.get("SSH_HOST", ""))
-    parser.add_argument("--ssh-port", default=environ.get("SSH_PORT", ""))
-    parser.add_argument("--ssh-username", default=environ.get("SSH_USERNAME", ""))
-    parser.add_argument("--ssh-password", default=environ.get("SSH_PASSWORD", ""))
+    parser.add_argument("--ssh-host", default=environ.get("SSH_HOST", "").strip())
+    parser.add_argument("--ssh-port", default=environ.get("SSH_PORT", "").strip())
+    parser.add_argument("--ssh-username", default=environ.get("SSH_USERNAME", "").strip())
+    parser.add_argument("--ssh-password", default=environ.get("SSH_PASSWORD", "").strip())
 
     # Email Notifications
-    parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", ""))
-    parser.add_argument("--email-smtp-port", default=environ.get("EMAIL_SMTP_PORT", ""))
-    parser.add_argument("--email-smtp-username", default=environ.get("EMAIL_SMTP_USERNAME", ""))
-    parser.add_argument("--email-smtp-password", default=environ.get("EMAIL_SMTP_PASSWORD", ""))
-    parser.add_argument("--email-to-address", default=environ.get("EMAIL_TO_ADDRESS", ""))
-    parser.add_argument("--email-from-address", default=environ.get("EMAIL_FROM_ADDRESS", ""))
+    parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", "").strip())
+    parser.add_argument("--email-smtp-port", default=environ.get("EMAIL_SMTP_PORT", "").strip())
+    parser.add_argument("--email-smtp-username", default=environ.get("EMAIL_SMTP_USERNAME", "").strip())
+    parser.add_argument("--email-smtp-password", default=environ.get("EMAIL_SMTP_PASSWORD", "").strip())
+    parser.add_argument("--email-to-address", default=environ.get("EMAIL_TO_ADDRESS", "").strip())
+    parser.add_argument("--email-from-address", default=environ.get("EMAIL_FROM_ADDRESS", "").strip())
 
     # Specify output of "--version"
     parser.add_argument(

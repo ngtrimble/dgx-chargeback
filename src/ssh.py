@@ -5,7 +5,7 @@ import timeout_decorator
 import os
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __license__ = "MIT"
 
 class Ssh:

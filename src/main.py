@@ -8,7 +8,7 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __license__ = "MIT"
 
 from os import environ
@@ -56,16 +56,32 @@ def formatSlurmJobState(stateId):
     state = states.get(stateId, "UNKNOWN")
     return state
 
-def formatGpuCount(gpuCount):
+def getGpuCount(tresReq):
     """
-    Convert the GPU Count from the SLurm DB, to an int
-    The Slurm DB will store a string in the form "gpu:1" if a GPU was requested
-    If a GPU was not requested, it will be empty
+    Extract the requested GPU Count from the tres_req field in the SlurmDb
+    This field is stored in CSV format, where GPU requests are coded as '1001=n'
+    An example tres_req field for a Single GPU request might look like:
+        1=4,2=10240,4=1,5=4,1001=1
+    Meaning, 1 GPU was requested.
     """
-    if gpuCount:
-        intGpuCount = int("0"+gpuCount.split(":")[1])
-        return intGpuCount
+    if tresReq:
+        tres_dict = {}
+
+        try:
+            for tres in tresReq.split(','):
+                tres_dict[int(tres.split('=')[0])] = int(tres.split('=')[1])
+        except Exception as err:
+            logger.error("Failed to parse tres_req field")
+            logger.error(err)
+            pass
+
+        if 1001 in tres_dict.key:
+            return tres_dict[1001]
+        else:
+            logger.warn("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
+            return int(0)
     else:
+        logger.warn("No content found in tres_req field, setting GPU count to '0'")
         return int(0)
 
 def getUserGroupname(sshHost, accountName, username):
@@ -123,8 +139,8 @@ def parseSlurmJobs(jobs, sshHost):
         user_name      = getUsername(sshHost,job["id_user"])
         group_name     = getUserGroupname(sshHost,job["account"],user_name)
         job_result     = formatSlurmJobState(job["state"])
-        gpus_requested = formatGpuCount(job["gres_req"])
-        gpus_used      = formatGpuCount(job["gres_req"])
+        gpus_requested = getGpuCount(job["tres_req"])
+        gpus_used      = getGpuCount(job["tres_req"])
 
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],

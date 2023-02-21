@@ -2,7 +2,7 @@ from logzero import logger
 import mysql.connector
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __license__ = "MIT"
 
 class MySqlDb:
@@ -91,7 +91,7 @@ class SlurmDb(MySqlDb):
             "nodelist",
             "nodes_alloc",
             "state",
-            "gres_req",
+            "tres_req",
             "account"
         ])
 

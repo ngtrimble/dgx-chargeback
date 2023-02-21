@@ -1,4 +1,4 @@
-FROM python:3.8-slim-bullseye
+FROM python:3.10-slim-bullseye
 
 WORKDIR /app
 
@@ -8,6 +8,7 @@ RUN apt-get update && \
 
 COPY src/ ./
 
-RUN pip install --upgrade -r ./requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --upgrade -r ./requirements.txt
 
 ENTRYPOINT ["python", "main.py"]

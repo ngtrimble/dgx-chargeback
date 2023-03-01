@@ -66,20 +66,23 @@ def getGpuCount(tresReq):
     """
     if tresReq:
         tres_dict = {}
+        logger.debug("tres_req field is '{}'".format(tresReq))
 
         try:
             for tres in tresReq.split(','):
                 tres_dict[int(tres.split('=')[0])] = int(tres.split('=')[1])
-        except Exception as err:
-            logger.error("Failed to parse tres_req field")
-            logger.error(err)
-            pass
 
-        if 1001 in tres_dict.key:
-            return tres_dict[1001]
-        else:
-            logger.warn("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
+            if 1001 in tres_dict:
+                return tres_dict[1001]
+            else:
+                logger.warn("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
+                return int(0)
+            
+        except Exception as err:
+            logger.error("Failed to parse tres_req field. Look into this or users will not be charged for GPU utilization")
+            logger.error(err)
             return int(0)
+
     else:
         logger.warn("No content found in tres_req field, setting GPU count to '0'")
         return int(0)
@@ -167,7 +170,8 @@ def parseSlurmJobs(jobs, sshHost):
 
 def main(args):
     """ Main entry point of the app """
-    logzero.logfile("/tmp/chargeback.log", mode="w")
+    logzero.loglevel(logzero.DEBUG)
+    logzero.logfile("/tmp/chargeback.log", mode="w", loglevel=logzero.DEBUG)
     logger.info("Starting DGX Chargeback Run")
 
     try:

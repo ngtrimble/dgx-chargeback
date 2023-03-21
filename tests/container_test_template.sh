@@ -2,6 +2,7 @@
 
 podman run --rm \
     -e SLURM_JOB_PREV_DAYS=5 \
+    -e SLURM_ASSOC_BACKEND='slurm_acctdb' \
     -e SLURM_CLUSTER_NAME='' \
     -e SLURM_DB_HOST='' \
     -e SLURM_DB_PORT=3306 \

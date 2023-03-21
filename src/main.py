@@ -75,7 +75,7 @@ def getGpuCount(tresReq):
             if 1001 in tres_dict:
                 return tres_dict[1001]
             else:
-                logger.warn("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
+                logger.warning("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
                 return int(0)
             
         except Exception as err:
@@ -84,7 +84,7 @@ def getGpuCount(tresReq):
             return int(0)
 
     else:
-        logger.warn("No content found in tres_req field, setting GPU count to '0'")
+        logger.warning("No content found in tres_req field, setting GPU count to '0'")
         return int(0)
 
 def getUserGroupname(sshHost, accountName, username):
@@ -257,6 +257,7 @@ if __name__ == "__main__":
     parser.add_argument("--ssh-port", default=environ.get("SSH_PORT", "").strip())
     parser.add_argument("--ssh-username", default=environ.get("SSH_USERNAME", "").strip())
     parser.add_argument("--ssh-password", default=environ.get("SSH_PASSWORD", "").strip())
+    parser.add_argument("--ssh-file-cleanup", default=environ.get("SSH_FILE_CLEANUP", "").strip())
 
     # Email Notifications
     parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", "").strip())

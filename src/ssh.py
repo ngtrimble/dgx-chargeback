@@ -3,6 +3,8 @@ import paramiko
 from scp import SCPClient
 import timeout_decorator
 import os
+import pwd
+import grp
 
 __author__ = "Kalen Peterson"
 __version__ = "0.4.0"
@@ -19,8 +21,6 @@ class Ssh:
         self._client = paramiko.SSHClient()
         self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._scp = None
-        self._passwd = None
-        self._group = None
         
         try:
             logger.info("Connecting to SSH Server: " + hostname)
@@ -51,59 +51,27 @@ class Ssh:
             logger.warning("Failed to cleanly close the SSH Connection")
             pass
 
-        try:
-            logger.info("Cleaning up temporary files: " + self._host)
-            os.remove('/tmp/passwd')
-            os.remove('/tmp/group')
-        except:
-            logger.warning("Failed to cleanup temporary files. This is OK")
-            pass
-
     @timeout_decorator.timeout(60, timeout_exception=TimeoutError, exception_message="SCP Timeout (60 seconds)")
     def getUsersAndGroups(self):
         """
-        Get the /etc/passwd and /etc/group files, and store them in lists
+        Copy the /etc/passwd and /etc/group files to local container
         """
 
         logger.info("Collecting /etc/passwd and /etc/group from SSH Host")
 
         # Get /etc/passwd
         try:
-            self._scp.get('/etc/passwd','/tmp/passwd')
+            self._scp.get('/etc/passwd','/etc/passwd')
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to get /etc/passwd file with SCP")
 
-        # Parse /etc/passwd
-        if os.path.isfile('/tmp/passwd'):
-            with open('/tmp/passwd') as f:
-                self._passwd  = f.read().splitlines()
-        else:
-            raise Exception("Failed to read contents of passwd, /tmp/passwd does not exist")
-
         # Get /etc/group
         try:
-            self._scp.get('/etc/group','/tmp/group')
+            self._scp.get('/etc/group','/etc/group')
         except Exception as err:
             logger.error(err)
             raise Exception("Failed to get /etc/group file with SCP")
-
-        # Parse /etc/group
-        if os.path.isfile('/tmp/group'):
-            with open('/tmp/group') as f:
-                self._group  = f.read().splitlines()
-        else:
-            raise Exception("Failed to read contents of group, /tmp/group does not exist")
-
-        # Validate passwd and group
-        if not self._passwd:
-            raise Exception("passwd is empty")
-
-        if not self._group:
-            raise Exception("group is empty")
-
-        logger.debug("Found '{}' users in /etc/passwd, and '{}' groups in /etc/group".format(len(self._passwd),len(self._group)))
-
 
     def mapUidtoUsername(self, uid):
         """
@@ -111,16 +79,11 @@ class Ssh:
         """
 
         username = None
-        for line in self._passwd:
-            split_line = line.split(':')
-            user_id = str(split_line[2])
-            user_name = str(split_line[0])
+        user_record = pwd.getpwuid(uid)
+        username = user_record.pw_name
 
-            if user_id == str(uid):
-                username = user_name
-                break
-        
         if username:
+            logger.debug("Mapped UID '{}' to Username '{}'".format(uid, username))
             return str(username)
         else:
             raise Exception('Failed to map UID to user')
@@ -131,17 +94,12 @@ class Ssh:
         """
 
         groups = []
-        for line in self._group:
-            split_line = line.split(':')
-            group_name = str(split_line[0])
-            group_members = str(split_line[3])
-
-            if group_members:
-                split_group_members = group_members.split(',')
-                if str(username) in split_group_members:
-                    groups.append(group_name)
+        user_record = pwd.getpwnam(username)
+        gid = user_record.pw_gid
+        groups = [grp.getgrgid(g).gr_name for g in os.getgrouplist(username, gid)]
 
         if groups:
+            logger.debug("Mapped Username '{}' to Groups '{}'".format(username, ','.join(groups)))
             return groups
         else:
             raise Exception('Failed to map UID to member groups')

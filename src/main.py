@@ -8,7 +8,7 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __license__ = "MIT"
 
 from os import environ
@@ -111,6 +111,23 @@ def getUserGroupname(sshHost, accountName, username):
         else:
             logger.error("Failed to map UID: %s to Group ending in '-G'" % (username))
             return str("UNKNOWN")
+        
+def getUserSlurmAssoc(slurmAssocTable, username):
+    """
+    Get the GroupName for a user from the Slurm Assoc Table
+    If we are unable to find an association, raise an error
+    """
+    try:
+        matched_account = next((item for item in slurmAssocTable if item["user"] == username), None)
+    except Exception as err:
+        logger.error(err)
+        pass
+
+    if matched_account is not None:
+        return matched_account.get('account', 'UNKNOWN')
+    else:
+        logger.error("Failed to map User '{}' to Slurm Assoc Account".format(username))
+        return 'UNKNOWN'
 
 def getUsername(sshHost, uid):
     """
@@ -129,7 +146,7 @@ def getUsername(sshHost, uid):
 
     return username
 
-def parseSlurmJobs(jobs, sshHost):
+def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable):
     """
     Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
     """
@@ -140,10 +157,18 @@ def parseSlurmJobs(jobs, sshHost):
         time_end       = formatUnixToDateString(job["time_end"])
         duration_sec   = int(job["time_end"] - job["time_start"])
         user_name      = getUsername(sshHost,job["id_user"])
-        group_name     = getUserGroupname(sshHost,job["account"],user_name)
         job_result     = formatSlurmJobState(job["state"])
         gpus_requested = getGpuCount(job["tres_req"])
         gpus_used      = getGpuCount(job["tres_req"])
+
+        # Route the Group mapping to the correct backend
+        if slurmAssocBackend == 'etc_group':
+            group_name = getUserGroupname(sshHost,job["account"],user_name)
+        elif slurmAssocBackend == 'slurm_acctdb':
+            group_name = getUserSlurmAssoc(slurmAssocTable,user_name)
+        else:
+            logger.error("slurm_assoc_backend is not set properly, this should have been caught earlier")
+            group_name = 'UNKNOWN'
 
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],
@@ -186,6 +211,16 @@ def main(args):
             args.slurm_cluster_name, args.slurm_db_username,
             args.slurm_db_password, args.slurm_db_host, 
             args.slurm_db_port, 'slurm_acct_db')
+        
+        # Setup the Account Associations backend
+        slurmAssocBackend = args.slurm_assoc_backend
+        if slurmAssocBackend == 'slurm_acctdb':
+            slurmAssocTable = slurmDb.getAccountAssociations()
+        elif slurmAssocBackend == 'etc_group':
+            slurmAssocTable = None
+        else:
+            raise Exception("slurm_assoc_backend is undefined or invalid. valid values are ['etc_group','slurm_acctdb']")
+        logger.info("Account association backend set to {}".format(slurmAssocBackend))
 
         # Setup the Chargeback DB
         chargebackDb = database.ChargebackDb(
@@ -210,7 +245,7 @@ def main(args):
 
         # Format the data and get everything we need to insert into the Chargeback DB
         logger.debug("Start parsing chargeback jobs")
-        chargebackRecords = parseSlurmJobs(jobs, sshHost)
+        chargebackRecords = parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable)
         logger.debug("Completed parsing chargeback jobs")
 
         # Insert Chargeback records
@@ -236,6 +271,10 @@ if __name__ == "__main__":
 
     # Misc Args
     parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 5).strip())
+
+    # Define the Account association backend
+    #  Can be "etc_group" or "slurm_acctdb"
+    parser.add_argument("--slurm-assoc-backend", default=environ.get("SLURM_ASSOC_BACKEND", "").strip())
 
     # Get the Slurm Args
     parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", "").strip())

@@ -16,6 +16,7 @@ metadata:
   name: env-config-dgx-chargeback
 data:
   SLURM_JOB_PREV_DAYS: ""
+  SLURM_ASSOC_BACKEND: ""
   SLURM_CLUSTER_NAME: ""
   SLURM_DB_HOST: ""
   SLURM_DB_PORT: ""

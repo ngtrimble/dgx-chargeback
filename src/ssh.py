@@ -7,7 +7,7 @@ import pwd
 import grp
 
 __author__ = "Kalen Peterson"
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __license__ = "MIT"
 
 class Ssh:

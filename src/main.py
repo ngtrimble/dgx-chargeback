@@ -123,10 +123,16 @@ def getUserSlurmAssoc(slurmAssocTable, username):
         logger.error(err)
         pass
 
+    logger.debug("matched account object is '{}'".format(matched_account))
     if matched_account is not None:
-        return matched_account.get('account', 'UNKNOWN')
+        account = matched_account.get('acct', None)
+        if account is not None:
+            return account
+        else:
+            logger.error("Failed to map User '{}' to Slurm Assoc Account. Match found, but 'acct' was NULL.".format(username))
+            return 'UNKNOWN'
     else:
-        logger.error("Failed to map User '{}' to Slurm Assoc Account".format(username))
+        logger.error("Failed to map User '{}' to Slurm Assoc Account. No match found in AssocTable.".format(username))
         return 'UNKNOWN'
 
 def getUsername(sshHost, uid):
@@ -214,14 +220,15 @@ def main(args):
         
         # Setup the Account Associations backend
         slurmAssocBackend = args.slurm_assoc_backend
+        logger.info("Account association backend set to {}".format(slurmAssocBackend))
         if slurmAssocBackend == 'slurm_acctdb':
             slurmAssocTable = slurmDb.getAccountAssociations()
+            logger.debug("Retrieved slurmAssocTable with {} unique entries".format(len(slurmAssocTable)))
         elif slurmAssocBackend == 'etc_group':
             slurmAssocTable = None
         else:
             raise Exception("slurm_assoc_backend is undefined or invalid. valid values are ['etc_group','slurm_acctdb']")
-        logger.info("Account association backend set to {}".format(slurmAssocBackend))
-
+        
         # Setup the Chargeback DB
         chargebackDb = database.ChargebackDb(
             args.chargeback_db_table_name, args.chargeback_db_username,

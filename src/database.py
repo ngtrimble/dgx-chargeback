@@ -174,3 +174,54 @@ class ChargebackDb(MySqlDb):
         else:
             logger.info("No Update needed, slurm_job_id=" + str(record["slurm_id_job"]) + " already exists")
             return False
+        
+    def getLatestJobs (self, limit):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "job_id",
+            "slurm_job_name",
+            "time_start",
+            "time_end",
+            "user_name"
+        ])
+
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " ORDER BY job_id DESC LIMIT %s"
+        params = (
+            limit,
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+
+    def getUserJobsCompletedRange (self, username, months):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "job_id",
+            "slurm_job_name",
+            "duration_sec",
+            "time_end",
+            "gpus_used",
+            "group_name",
+            "user_name",
+            "added"
+        ])
+
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE job_result = 'COMPLETED' AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
+        params = (
+            username,
+            months
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+    

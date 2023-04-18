@@ -2,6 +2,7 @@
 
 ../src/main.py \
     --slurm-job-prev-day 5 \
+    --slurm-assoc-backend 'slurm_acctdb' \
     --slurm-cluster-name '' \
     --slurm-db-host '' \
     --slurm-db-port 3306 \

@@ -8,7 +8,7 @@ This is the main entrypoint for the process.
 """
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 __license__ = "MIT"
 
 from os import environ
@@ -56,16 +56,35 @@ def formatSlurmJobState(stateId):
     state = states.get(stateId, "UNKNOWN")
     return state
 
-def formatGpuCount(gpuCount):
+def getGpuCount(tresReq):
     """
-    Convert the GPU Count from the SLurm DB, to an int
-    The Slurm DB will store a string in the form "gpu:1" if a GPU was requested
-    If a GPU was not requested, it will be empty
+    Extract the requested GPU Count from the tres_req field in the SlurmDb
+    This field is stored in CSV format, where GPU requests are coded as '1001=n'
+    An example tres_req field for a Single GPU request might look like:
+        1=4,2=10240,4=1,5=4,1001=1
+    Meaning, 1 GPU was requested.
     """
-    if gpuCount:
-        intGpuCount = int("0"+gpuCount.split(":")[1])
-        return intGpuCount
+    if tresReq:
+        tres_dict = {}
+        logger.debug("tres_req field is '{}'".format(tresReq))
+
+        try:
+            for tres in tresReq.split(','):
+                tres_dict[int(tres.split('=')[0])] = int(tres.split('=')[1])
+
+            if 1001 in tres_dict:
+                return tres_dict[1001]
+            else:
+                logger.warning("GPU Type (1001) not found in tres_req field, setting GPU count to '0'")
+                return int(0)
+            
+        except Exception as err:
+            logger.error("Failed to parse tres_req field. Look into this or users will not be charged for GPU utilization")
+            logger.error(err)
+            return int(0)
+
     else:
+        logger.warning("No content found in tres_req field, setting GPU count to '0'")
         return int(0)
 
 def getUserGroupname(sshHost, accountName, username):
@@ -92,6 +111,29 @@ def getUserGroupname(sshHost, accountName, username):
         else:
             logger.error("Failed to map UID: %s to Group ending in '-G'" % (username))
             return str("UNKNOWN")
+        
+def getUserSlurmAssoc(slurmAssocTable, username):
+    """
+    Get the GroupName for a user from the Slurm Assoc Table
+    If we are unable to find an association, raise an error
+    """
+    try:
+        matched_account = next((item for item in slurmAssocTable if item["user"] == username), None)
+    except Exception as err:
+        logger.error(err)
+        pass
+
+    logger.debug("matched account object is '{}'".format(matched_account))
+    if matched_account is not None:
+        account = matched_account.get('acct', None)
+        if account is not None:
+            return account
+        else:
+            logger.error("Failed to map User '{}' to Slurm Assoc Account. Match found, but 'acct' was NULL.".format(username))
+            return 'UNKNOWN'
+    else:
+        logger.error("Failed to map User '{}' to Slurm Assoc Account. No match found in AssocTable.".format(username))
+        return 'UNKNOWN'
 
 def getUsername(sshHost, uid):
     """
@@ -110,7 +152,7 @@ def getUsername(sshHost, uid):
 
     return username
 
-def parseSlurmJobs(jobs, sshHost):
+def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable):
     """
     Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
     """
@@ -121,10 +163,18 @@ def parseSlurmJobs(jobs, sshHost):
         time_end       = formatUnixToDateString(job["time_end"])
         duration_sec   = int(job["time_end"] - job["time_start"])
         user_name      = getUsername(sshHost,job["id_user"])
-        group_name     = getUserGroupname(sshHost,job["account"],user_name)
         job_result     = formatSlurmJobState(job["state"])
-        gpus_requested = formatGpuCount(job["gres_req"])
-        gpus_used      = formatGpuCount(job["gres_req"])
+        gpus_requested = getGpuCount(job["tres_req"])
+        gpus_used      = getGpuCount(job["tres_req"])
+
+        # Route the Group mapping to the correct backend
+        if slurmAssocBackend == 'etc_group':
+            group_name = getUserGroupname(sshHost,job["account"],user_name)
+        elif slurmAssocBackend == 'slurm_acctdb':
+            group_name = getUserSlurmAssoc(slurmAssocTable,user_name)
+        else:
+            logger.error("slurm_assoc_backend is not set properly, this should have been caught earlier")
+            group_name = 'UNKNOWN'
 
         chargebackRecord = {
             "slurm_job_name":  job["job_name"],
@@ -151,7 +201,8 @@ def parseSlurmJobs(jobs, sshHost):
 
 def main(args):
     """ Main entry point of the app """
-    logzero.logfile("/tmp/chargeback.log", mode="w")
+    logzero.loglevel(logzero.DEBUG)
+    logzero.logfile("/tmp/chargeback.log", mode="w", loglevel=logzero.DEBUG)
     logger.info("Starting DGX Chargeback Run")
 
     try:
@@ -166,7 +217,18 @@ def main(args):
             args.slurm_cluster_name, args.slurm_db_username,
             args.slurm_db_password, args.slurm_db_host, 
             args.slurm_db_port, 'slurm_acct_db')
-
+        
+        # Setup the Account Associations backend
+        slurmAssocBackend = args.slurm_assoc_backend
+        logger.info("Account association backend set to {}".format(slurmAssocBackend))
+        if slurmAssocBackend == 'slurm_acctdb':
+            slurmAssocTable = slurmDb.getAccountAssociations()
+            logger.debug("Retrieved slurmAssocTable with {} unique entries".format(len(slurmAssocTable)))
+        elif slurmAssocBackend == 'etc_group':
+            slurmAssocTable = None
+        else:
+            raise Exception("slurm_assoc_backend is undefined or invalid. valid values are ['etc_group','slurm_acctdb']")
+        
         # Setup the Chargeback DB
         chargebackDb = database.ChargebackDb(
             args.chargeback_db_table_name, args.chargeback_db_username,
@@ -190,7 +252,7 @@ def main(args):
 
         # Format the data and get everything we need to insert into the Chargeback DB
         logger.debug("Start parsing chargeback jobs")
-        chargebackRecords = parseSlurmJobs(jobs, sshHost)
+        chargebackRecords = parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable)
         logger.debug("Completed parsing chargeback jobs")
 
         # Insert Chargeback records
@@ -217,6 +279,10 @@ if __name__ == "__main__":
     # Misc Args
     parser.add_argument("--slurm-job-prev-days", type=int, default=environ.get("SLURM_JOB_PREV_DAYS", 5).strip())
 
+    # Define the Account association backend
+    #  Can be "etc_group" or "slurm_acctdb"
+    parser.add_argument("--slurm-assoc-backend", default=environ.get("SLURM_ASSOC_BACKEND", "").strip())
+
     # Get the Slurm Args
     parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", "").strip())
     parser.add_argument("--slurm-db-host", default=environ.get("SLURM_DB_HOST", "").strip())
@@ -237,6 +303,7 @@ if __name__ == "__main__":
     parser.add_argument("--ssh-port", default=environ.get("SSH_PORT", "").strip())
     parser.add_argument("--ssh-username", default=environ.get("SSH_USERNAME", "").strip())
     parser.add_argument("--ssh-password", default=environ.get("SSH_PASSWORD", "").strip())
+    parser.add_argument("--ssh-file-cleanup", default=environ.get("SSH_FILE_CLEANUP", "").strip())
 
     # Email Notifications
     parser.add_argument("--email-smtp-host", default=environ.get("EMAIL_SMTP_HOST", "").strip())

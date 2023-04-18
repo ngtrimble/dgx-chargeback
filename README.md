@@ -2,7 +2,7 @@
 This is intended to export GPU Utilization from Slurm, perform some processsing, and insert into a chargeback database.
 
 ## Overview
-This chargeback process is written using Python 3.8, and performs the following steps.
+This chargeback process is written using Python 3.10, and performs the following steps.
 
   - Connect to the Slurm Acct DB (MySQL)
   - Connect to the Chargeback DB (MySQL)
@@ -55,6 +55,7 @@ Run the chargeback process as a one-time container using podman.
 ```
 podman run --rm \
     -e SLURM_JOB_PREV_DAYS=5 \
+    -e SLURM_ASSOC_BACKEND='slurm_acctdb' \
     -e SLURM_CLUSTER_NAME='' \
     -e SLURM_DB_HOST='' \
     -e SLURM_DB_PORT=3306 \
@@ -88,6 +89,7 @@ cd src
 pip install -r requirements.txt
 python main.py \
     --slurm-job-prev-day 5 \
+    --slurm-assoc-backend 'slurm_acctdb' \
     --slurm-cluster-name '' \
     --slurm-db-host '' \
     --slurm-db-port 3306 \

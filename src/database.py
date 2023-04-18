@@ -2,7 +2,7 @@ from logzero import logger
 import mysql.connector
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 __license__ = "MIT"
 
 class MySqlDb:
@@ -73,7 +73,9 @@ class SlurmDb(MySqlDb):
         """
         super().__init__(*args, **kwargs)
         self._jobTable = str(slurmClusterName + '_job_table')
+        self._assocTable = str(slurmClusterName + '_assoc_table')
         logger.info("My Job Table is " + self._jobTable)
+        logger.info("My Association Table is " + self._assocTable)
     
     def getJobsRange (self, startDate, endDate):
         """
@@ -91,7 +93,7 @@ class SlurmDb(MySqlDb):
             "nodelist",
             "nodes_alloc",
             "state",
-            "gres_req",
+            "tres_req",
             "account"
         ])
 
@@ -106,7 +108,24 @@ class SlurmDb(MySqlDb):
         result = self.readQuery(query, params)
 
         return result
+    
+    def getAccountAssociations (self):
+        """
+        Get all User->Account associations
+        """
+        fields = ", ".join([
+            "user",
+            "acct"
+        ])
 
+        query = "SELECT " + fields + " FROM " + self._assocTable + " WHERE user <> ''"
+        params = None
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
 
 class ChargebackDb(MySqlDb):
     

@@ -4,7 +4,7 @@ from pathlib import Path
 import timeout_decorator
 
 __author__ = "Kalen Peterson"
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 __license__ = "MIT"
 
 class Email:

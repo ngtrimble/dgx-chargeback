@@ -33,10 +33,19 @@ def formatUnixToDateString(unixDate):
 def formatSlurmJobState(stateId):
     """
     Convert the Job State ID from Slurm acctdb to the friendly name
+    REFERENCE: https://slurm-dev.schedmd.narkive.com/EI7p2GQJ/job-state-codes
     """
     states = {
+        0: 'PENDING',
+        1: 'RUNNING',
+        2: 'SUSPENDED',
         3: 'COMPLETED',
-        5: 'FAILED'
+        4: 'CANCELLED',
+        5: 'FAILED',
+        6: 'TIMEOUT',
+        7: 'NODE_FAIL',
+        8: 'PREEMPTED',
+        9: 'END'
     }
     state = states.get(stateId, "UNKNOWN")
     return state

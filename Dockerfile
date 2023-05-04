@@ -13,4 +13,11 @@ RUN pip install --upgrade pip && \
 
 COPY src/ ./
 
-ENTRYPOINT ["python", "main.py"]
+COPY docker-entrypoint.sh ./
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
+# Set the default startup service to chargeback
+CMD ["chargeback"]

@@ -38,16 +38,19 @@ parser.add_argument("-g", action='store_true')
 parser.add_argument("-m", type=int, default=1)
 args = parser.parse_args()
 
+if args.u or args.g:
+    print("NOTICE: These figures are estimated based on job data as of the previous 24hours")
+    print("        Final billing calculations are done by the billing team at the end of each cycle")
 if args.u:
     # Print User Report
     printBasicReport(
         getUserReport(api_endpoint,username,args.m),
-        "Usage Report"
+        "Estimated Usage Report"
     )
 
 if args.g:
     # Print Group Report
     printBasicReport(
         getGroupReport(api_endpoint,username,args.m),
-        "Usage Report"
+        "Estimated Usage Report"
     )

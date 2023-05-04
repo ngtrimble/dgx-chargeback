@@ -3,9 +3,9 @@ from fastapi import FastAPI
 import common
 import database
 from os import environ
-import decimal
 from decimal import Decimal
 from dataclasses import dataclass
+from collections import Counter
 
 # Define Data Classes
 @dataclass
@@ -37,7 +37,17 @@ class BasicReport:
         description=None
     )
     total_jobs: ReportField = ReportField(
-        name='Total Completed Jobs',
+        name='Total Jobs',
+        value=None,
+        description=None
+    )
+    completed_jobs: ReportField = ReportField(
+        name='Completed Jobs',
+        value=None,
+        description=None
+    )
+    failed_jobs: ReportField = ReportField(
+        name='Failed Jobs',
         value=None,
         description=None
     )
@@ -62,7 +72,7 @@ class BasicReport:
         description=None
     )
     total_gpu_cost_usd: ReportField = ReportField(
-        name='Total Cost in USD',
+        name='Estimated Total Cost in USD',
         value=None,
         description=None
     )
@@ -77,18 +87,50 @@ def build_basic_report(jobs,gpu_usd_cost_per_minute,months,target_type,target_na
     report.gpu_usd_cost_per_minute.value = gpu_usd_cost_per_minute
     report.range.value = months
 
+    # Calculate Job Counts
     report.total_jobs.value = int(len(jobs))
-    report.total_gpus_used.value = int(sum(job['gpus_used'] for job in jobs))
+    job_results = Counter(job['job_result'] for job in jobs)
+    report.completed_jobs.value = int(job_results['COMPLETED'])
+    report.failed_jobs.value = int(job_results['FAILED'])
 
+    # Calulate GPU Counts
+    report.total_gpus_used.value = int(sum(job['gpus_used'] for job in jobs))
     report.total_gpu_seconds.value = int(0)
     for job in jobs:
         report.total_gpu_seconds.value += int(int(job['gpus_used']) * int(job['duration_sec']))
 
     report.total_gpu_minutes.value = round(Decimal(report.total_gpu_seconds.value / 60), 3)
     report.total_gpu_hours.value   = round(Decimal(report.total_gpu_seconds.value / 60 / 60), 3)
-    report.total_gpu_cost_usd.value = round(Decimal(report.total_gpu_minutes.value * gpu_usd_cost_per_minute), 3)
+
+    # Calulate Costs
+    report.total_gpu_cost_usd.value = round(Decimal(report.total_gpu_minutes.value * Decimal(gpu_usd_cost_per_minute)), 3)
 
     return report
+
+# Setup ENV
+class Environment:
+    
+    # Chargeback DB Settings
+    chargeback_db_table_name: str = environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip()
+    chargeback_db_username: str = environ.get("CHARGEBACK_DB_USERNAME", "").strip()
+    chargeback_db_password: str = environ.get("CHARGEBACK_DB_PASSWORD", "").strip()
+    chargeback_db_host: str = environ.get("CHARGEBACK_DB_HOST", "").strip()
+    chargeback_db_port: int = environ.get("CHARGEBACK_DB_PORT", "").strip()
+    chargeback_db_schema_name: int = environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip()
+
+    # Slurm DB Settings
+    slurm_cluster_name: str = environ.get("SLURM_CLUSTER_NAME", "").strip()
+    slurm_db_username: str = environ.get("SLURM_DB_USERNAME", "").strip()
+    slurm_db_password: str = environ.get("SLURM_DB_PASSWORD", "").strip()
+    slurm_db_host: str = environ.get("SLURM_DB_HOST", "").strip()
+    slurm_db_port: int = environ.get("SLURM_DB_PORT", "").strip()
+    slurm_db_name: str = 'slurm_acct_db'
+
+    # Reporting Settings
+    gpu_usd_cost_per_minute: Decimal = environ.get("GPU_USD_COST_PER_MINUTE", "").strip()
+    min_job_duration_sec: int = 60
+
+env = Environment()
 
 # Build API
 app = FastAPI()
@@ -97,14 +139,21 @@ app = FastAPI()
 async def root():
     return {"message": "Hello"}
 
+@app.get("/health")
+async def root():
+    return {"message": "OK"}
+
 @app.get("/jobs/all")
 async def read_jobs_all(limit: int = 10):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
-        environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip(), environ.get("CHARGEBACK_DB_USERNAME", "").strip(),
-        environ.get("CHARGEBACK_DB_PASSWORD", "").strip(), environ.get("CHARGEBACK_DB_HOST", "").strip(), 
-        environ.get("CHARGEBACK_DB_PORT", "").strip(), environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip())
+        env.chargeback_db_table_name,
+        env.chargeback_db_username,
+        env.chargeback_db_password,
+        env.chargeback_db_host, 
+        env.chargeback_db_port,
+        env.chargeback_db_schema_name)
     
     # Get Jobs
     jobs = chargebackDb.getJobs(limit)
@@ -115,12 +164,15 @@ async def read_jobs_user_30days(user_name: str, months: int = 1):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
-        environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip(), environ.get("CHARGEBACK_DB_USERNAME", "").strip(),
-        environ.get("CHARGEBACK_DB_PASSWORD", "").strip(), environ.get("CHARGEBACK_DB_HOST", "").strip(), 
-        environ.get("CHARGEBACK_DB_PORT", "").strip(), environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip())
+        env.chargeback_db_table_name,
+        env.chargeback_db_username,
+        env.chargeback_db_password,
+        env.chargeback_db_host, 
+        env.chargeback_db_port,
+        env.chargeback_db_schema_name)
     
     # Get Jobs
-    jobs = chargebackDb.getUserJobsCompletedRange(user_name, months)
+    jobs = chargebackDb.getUserJobsInMonthRange(user_name, months, env.min_job_duration_sec)
     return jobs
 
 @app.get("/report/users/{user_name}")
@@ -128,16 +180,18 @@ async def read_report_user_months(user_name: str, months: int = 1):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
-        environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip(), environ.get("CHARGEBACK_DB_USERNAME", "").strip(),
-        environ.get("CHARGEBACK_DB_PASSWORD", "").strip(), environ.get("CHARGEBACK_DB_HOST", "").strip(), 
-        environ.get("CHARGEBACK_DB_PORT", "").strip(), environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip())
+        env.chargeback_db_table_name,
+        env.chargeback_db_username,
+        env.chargeback_db_password,
+        env.chargeback_db_host, 
+        env.chargeback_db_port,
+        env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getUserJobsCompletedRange(user_name, months)
+    jobs = chargebackDb.getUserJobsInMonthRange(user_name, months, env.min_job_duration_sec)
 
     # Calculate and build Report
-    gpu_usd_cost_per_minute = Decimal(0.008)
-    report = build_basic_report(jobs, gpu_usd_cost_per_minute, months, 'user', user_name)
+    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, months, 'user', user_name)
 
     return report
 
@@ -146,24 +200,29 @@ async def read_report_group_months(user_name: str, months: int = 1):
     
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(
-        environ.get("SLURM_CLUSTER_NAME", "").strip(), environ.get("SLURM_DB_USERNAME", "").strip(),
-        environ.get("SLURM_DB_PASSWORD", "").strip(), environ.get("SLURM_DB_HOST", "").strip(), 
-        environ.get("SLURM_DB_PORT", "").strip(), 'slurm_acct_db')
+        env.slurm_cluster_name,
+        env.slurm_db_username,
+        env.slurm_db_password,
+        env.slurm_db_host, 
+        env.slurm_db_port,
+        env.slurm_db_name)
     
     # Map User to Group
     group_name = common.getUserSlurmAssoc(slurmDb.getAccountAssociations(),user_name)
 
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
-        environ.get("CHARGEBACK_DB_TABLE_NAME", "").strip(), environ.get("CHARGEBACK_DB_USERNAME", "").strip(),
-        environ.get("CHARGEBACK_DB_PASSWORD", "").strip(), environ.get("CHARGEBACK_DB_HOST", "").strip(), 
-        environ.get("CHARGEBACK_DB_PORT", "").strip(), environ.get("CHARGEBACK_DB_SCHEMA_NAME", "").strip())
+        env.chargeback_db_table_name,
+        env.chargeback_db_username,
+        env.chargeback_db_password,
+        env.chargeback_db_host, 
+        env.chargeback_db_port,
+        env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getGroupJobsCompletedRange(group_name, months)
+    jobs = chargebackDb.getGroupJobsInMonthRange(group_name, months, env.min_job_duration_sec)
 
     # Calculate and build Report
-    gpu_usd_cost_per_minute = Decimal(0.008)
-    report = build_basic_report(jobs, gpu_usd_cost_per_minute, months, 'group', group_name)
+    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, months, 'group', group_name)
 
     return report

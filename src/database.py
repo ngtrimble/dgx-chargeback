@@ -198,23 +198,19 @@ class ChargebackDb(MySqlDb):
 
         return result
 
-    def getUserJobsCompletedRange (self, username, months):
+    def getUserJobsInMonthRange (self, username, months, min_job_duration_sec):
         """
         Get all jobs with time_end in a range
         """
         fields = ", ".join([
-            "job_id",
-            "slurm_job_name",
             "duration_sec",
-            "time_end",
             "gpus_used",
-            "group_name",
-            "user_name",
-            "added"
+            "job_result"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE job_result = 'COMPLETED' AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
         params = (
+            min_job_duration_sec,
             username,
             months
         )
@@ -225,23 +221,19 @@ class ChargebackDb(MySqlDb):
 
         return result
     
-    def getGroupJobsCompletedRange (self, groupname, months):
+    def getGroupJobsInMonthRange (self, groupname, months, min_job_duration_sec):
         """
         Get all jobs with time_end in a range
         """
         fields = ", ".join([
-            "job_id",
-            "slurm_job_name",
             "duration_sec",
-            "time_end",
             "gpus_used",
-            "group_name",
-            "user_name",
-            "added"
+            "job_result"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE job_result = 'COMPLETED' AND group_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND group_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
         params = (
+            min_job_duration_sec,
             groupname,
             months
         )

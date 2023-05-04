@@ -24,4 +24,5 @@ podman run --rm \
     -e EMAIL_SMTP_PASSWORD='' \
     -e EMAIL_TO_ADDRESS='User <user.name@example.com>' \
     -e EMAIL_FROM_ADDRESS='DGX Chargeback <no-reply@example.com>' \
+    -e GPU_USD_COST_PER_MINUTE=0.008 \
     docker.io/kalenpeterson/dgx-chargeback:latest

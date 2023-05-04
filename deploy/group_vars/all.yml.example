@@ -1,0 +1,40 @@
+---
+slurm: 
+  job_prev_days: 
+  assoc_backend: 
+  cluster_name: 
+  db: 
+    host: 
+    port: 
+    username: 
+    password: 
+chargeback: 
+  db: 
+    host: 
+    port: 
+    username: 
+    password: 
+    schema: 
+      name: 
+    tabble: 
+      name: 
+ssh: 
+  host: 
+  port: 
+  username: 
+  password: 
+  file: 
+    cleanup: 
+email: 
+  smtp: 
+    host: 
+    port: 
+    username: 
+    password: 
+  to: 
+    address: 
+  from: 
+    address: 
+gpu_usd_cost_per_minute: 
+
+  

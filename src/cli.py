@@ -1,12 +1,15 @@
 #!/usr/bin/python3
 
 import os
+import socket
 import argparse
 import requests
 from prettytable import PrettyTable
 
 # Vars
-api_endpoint = 'http://localhost:8000'
+api_host = socket.gethostname()
+api_port = 30800
+api_endpoint = 'http://{}:{}'.format(api_host, api_port)
 
 # Get current user
 username = os.getlogin()

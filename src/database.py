@@ -97,6 +97,9 @@ class SlurmDb(MySqlDb):
             "account"
         ])
 
+        # Select all Jobs
+        #  - time_end: In the specified UNIX Timestamp range
+        #  - time_start: Greater than 0. If it is 0, the job was never executed.
         query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE (time_end BETWEEN %s AND %s) AND time_start > 0"
         params = (
             startDate,
@@ -208,7 +211,8 @@ class ChargebackDb(MySqlDb):
             "job_result"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH )) AND YEAR(time_start) > 2020"
         params = (
             min_job_duration_sec,
             username,
@@ -231,7 +235,8 @@ class ChargebackDb(MySqlDb):
             "job_result"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND group_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH ))"
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND group_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH )) AND YEAR(time_start) > 2020"
         params = (
             min_job_duration_sec,
             groupname,

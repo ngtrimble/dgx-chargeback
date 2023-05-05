@@ -36,6 +36,8 @@
 - name: Deploy Chargeback Client Resources
   hosts: mgmt
   gather_facts: no
+  vars:
+    cli_name: 'charges'
     
   tasks:
   - name: Install Python3 Devel
@@ -59,15 +61,15 @@
 
   - name: Compile Python to C Binary
     shell: |
-      cython --embed -o /tmp/gpusage.c ../src/cli.py
-      gcc -Os -I /usr/include/python3.6m -o /tmp/gpusage /tmp/gpusage.c -lpython3.6m -lpthread -lm -lutil -ldl
+      cython --embed -o /tmp/{{ cli_name }}.c ../src/cli.py
+      gcc -Os -I /usr/include/python3.6m -o /tmp/{{ cli_name }} /tmp/{{ cli_name }}.c -lpython3.6m -lpthread -lm -lutil -ldl
     delegate_to: localhost
     run_once: true
 
   - name: Copy Binary to path
     copy:
-      src: /tmp/gpusage
-      dest: /usr/local/bin/gpusage
+      src: /tmp/{{ cli_name }}
+      dest: /usr/local/bin/{{ cli_name }}
       mode: 755
       owner: root
     become: yes
@@ -77,7 +79,7 @@
       path: '{{ item }}'
       state: absent
     loop:
-      - /tmp/gpusage
-      - /tmp/gpusage.c
+      - /tmp/{{ cli_name }}
+      - /tmp/{{ cli_name }}.c
     delegate_to: localhost
     run_once: true

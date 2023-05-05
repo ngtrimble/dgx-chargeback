@@ -34,7 +34,7 @@
           kubernetes.cleanup_temp_manifest is true
 
 - name: Deploy Chargeback Client Resources
-  hosts: all
+  hosts: mgmt
   gather_facts: no
     
   tasks:
@@ -43,6 +43,8 @@
       name: python3-devel
       state: present
     become: yes
+    delegate_to: localhost
+    run_once: true
 
   - name: Install Python requirements
     pip:
@@ -52,11 +54,15 @@
         - prettytable
         - cython
     become: yes
+    delegate_to: localhost
+    run_once: true
 
   - name: Compile Python to C Binary
     shell: |
       cython --embed -o /tmp/gpusage.c ../src/cli.py
       gcc -Os -I /usr/include/python3.6m -o /tmp/gpusage /tmp/gpusage.c -lpython3.6m -lpthread -lm -lutil -ldl
+    delegate_to: localhost
+    run_once: true
 
   - name: Copy Binary to path
     copy:
@@ -73,3 +79,5 @@
     loop:
       - /tmp/gpusage
       - /tmp/gpusage.c
+    delegate_to: localhost
+    run_once: true

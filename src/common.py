@@ -146,12 +146,16 @@ def getUsername(sshHost, uid):
 
     return username
 
-def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable):
+def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable, slurmPartitionFilter):
     """
     Parse the completed slurm jobs, and prepare them for insert into chargeback DB.
     """
     chargebackRecords = []
     for job in jobs:
+
+        # Skip the record if this partition is to be filtered
+        if slurmPartitionFilter == job["'partition'"]:
+            continue
 
         time_start     = formatUnixToDateString(job["time_start"])
         time_end       = formatUnixToDateString(job["time_end"])
@@ -187,7 +191,8 @@ def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable):
             "slurm_job_state": job["state"],
             "job_result":      job_result,
             "gpus_requested":  gpus_requested,
-            "gpus_used":       gpus_used
+            "gpus_used":       gpus_used,
+            "partition":       job["'partition'"]
         }
         chargebackRecords.append(chargebackRecord)
     

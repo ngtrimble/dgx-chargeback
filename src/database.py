@@ -94,7 +94,8 @@ class SlurmDb(MySqlDb):
             "nodes_alloc",
             "state",
             "tres_req",
-            "account"
+            "account",
+            "'partition'"
         ])
 
         # Select all Jobs

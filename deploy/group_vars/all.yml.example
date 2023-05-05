@@ -2,6 +2,7 @@
 slurm: 
   job_prev_days: 14
   assoc_backend: alurm_acctdb
+  partition_filter: ''
   cluster_name: 
   db: 
     host: 

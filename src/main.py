@@ -73,7 +73,7 @@ def main(args):
 
         # Format the data and get everything we need to insert into the Chargeback DB
         logger.debug("Start parsing chargeback jobs")
-        chargebackRecords = common.parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable)
+        chargebackRecords = common.parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable, args.slurm_partition_filter)
         logger.debug("Completed parsing chargeback jobs")
 
         # Insert Chargeback records
@@ -103,6 +103,12 @@ if __name__ == "__main__":
     # Define the Account association backend
     #  Can be "etc_group" or "slurm_acctdb"
     parser.add_argument("--slurm-assoc-backend", default=environ.get("SLURM_ASSOC_BACKEND", "").strip())
+
+    # A filter to exclude the name of (1) partition
+    #  only one name is supported for now, and must be an exact match
+    #  added to support filtering out jobs from the basic partition
+    #  if unset or empty, will be ignored
+    parser.add_argument("--slurm-partition-filter", default=environ.get("SLURM_PARTITION_FILTER", "").strip())
 
     # Get the Slurm Args
     parser.add_argument("--slurm-cluster-name", default=environ.get("SLURM_CLUSTER_NAME", "").strip())

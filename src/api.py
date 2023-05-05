@@ -143,38 +143,6 @@ async def root():
 async def root():
     return {"message": "OK"}
 
-@app.get("/jobs/all")
-async def read_jobs_all(limit: int = 10):
-    
-    # Setup the Chargeback DB
-    chargebackDb = database.ChargebackDb(
-        env.chargeback_db_table_name,
-        env.chargeback_db_username,
-        env.chargeback_db_password,
-        env.chargeback_db_host, 
-        env.chargeback_db_port,
-        env.chargeback_db_schema_name)
-    
-    # Get Jobs
-    jobs = chargebackDb.getJobs(limit)
-    return jobs
-
-@app.get("/jobs/users/{user_name}")
-async def read_jobs_user_30days(user_name: str, months: int = 1):
-    
-    # Setup the Chargeback DB
-    chargebackDb = database.ChargebackDb(
-        env.chargeback_db_table_name,
-        env.chargeback_db_username,
-        env.chargeback_db_password,
-        env.chargeback_db_host, 
-        env.chargeback_db_port,
-        env.chargeback_db_schema_name)
-    
-    # Get Jobs
-    jobs = chargebackDb.getUserJobsInMonthRange(user_name, months, env.min_job_duration_sec)
-    return jobs
-
 @app.get("/report/users/{user_name}")
 async def read_report_user_months(user_name: str, months: int = 1):
     

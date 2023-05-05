@@ -63,7 +63,7 @@ def main(args):
 
         # Get day range in UNIX Time
         logger.info("Looking for completed Slurm jobs in the past '{}' days".format(args.slurm_job_prev_days))
-        dateRange = getDateRangeUnix(args.slurm_job_prev_days)
+        dateRange = common.getDateRangeUnix(args.slurm_job_prev_days)
         logger.debug("Calulated Date-Range in unixtime is '{}' to '{}'".format(dateRange.get("start"), dateRange.get("end")))
         
         # Get Jobs in range from Slurm DB
@@ -73,7 +73,7 @@ def main(args):
 
         # Format the data and get everything we need to insert into the Chargeback DB
         logger.debug("Start parsing chargeback jobs")
-        chargebackRecords = parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable)
+        chargebackRecords = common.parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable)
         logger.debug("Completed parsing chargeback jobs")
 
         # Insert Chargeback records

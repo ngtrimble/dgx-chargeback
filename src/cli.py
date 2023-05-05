@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import os
+import getpass
 import socket
 import argparse
 import requests
@@ -12,7 +12,7 @@ api_port = 30800
 api_endpoint = 'http://{}:{}'.format(api_host, api_port)
 
 # Get current user
-username = os.getlogin()
+username = getpass.getuser()
 
 # Get Simple User Report
 def getUserReport(api_endpoint,username,months):
@@ -39,8 +39,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-u", action='store_true')
 parser.add_argument("-g", action='store_true')
 parser.add_argument("-m", type=int, default=1)
+parser.add_argument("-U", type=str, default=None)
 args = parser.parse_args()
 
+if username == 'root':
+    if args.U is not None:
+        username = args.U
+        print("You are root'. Run Report as User: '{}'".format(username))
+    else:
+        raise("ERROR: When running as root, you must specify a username to query with -U")
+    
 if args.u or args.g:
     print("NOTICE: These figures are estimated based on job data as of the previous 24hours")
     print("        Final billing calculations are done by the billing team at the end of each cycle")

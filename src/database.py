@@ -97,7 +97,7 @@ class SlurmDb(MySqlDb):
             "account"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE time_end BETWEEN %s AND %s"
+        query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE (time_end BETWEEN %s AND %s) AND time_start > 0"
         params = (
             startDate,
             endDate

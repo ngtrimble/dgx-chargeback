@@ -54,8 +54,6 @@
         - prettytable
         - cython
     become: yes
-    delegate_to: localhost
-    run_once: true
 
   - name: Compile Python to C Binary
     shell: |

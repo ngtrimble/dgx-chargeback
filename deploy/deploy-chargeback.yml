@@ -59,15 +59,15 @@
 
   - name: Compile Python to C Binary
     shell: |
-      cython --embed -o /tmp/{{ cli_binary_name }}.c ../src/cli.py
-      gcc -Os -I /usr/include/python3.6m -o /tmp/{{ cli_binary_name }} /tmp/{{ cli_binary_name }}.c -lpython3.6m -lpthread -lm -lutil -ldl
+      cython --embed -o /tmp/{{ chargeback.cli_binary_name }}.c ../src/cli.py
+      gcc -Os -I /usr/include/python3.6m -o /tmp/{{ chargeback.cli_binary_name }} /tmp/{{ chargeback.cli_binary_name }}.c -lpython3.6m -lpthread -lm -lutil -ldl
     delegate_to: localhost
     run_once: true
 
   - name: Copy Binary to path
     copy:
-      src: /tmp/{{ cli_binary_name }}
-      dest: /usr/local/bin/{{ cli_binary_name }}
+      src: /tmp/{{ chargeback.cli_binary_name }}
+      dest: /usr/local/bin/{{ chargeback.cli_binary_name }}
       mode: 755
       owner: root
     become: yes
@@ -77,7 +77,7 @@
       path: '{{ item }}'
       state: absent
     loop:
-      - /tmp/{{ cli_binary_name }}
-      - /tmp/{{ cli_binary_name }}.c
+      - /tmp/{{ chargeback.cli_binary_name }}
+      - /tmp/{{ chargeback.cli_binary_name }}.c
     delegate_to: localhost
     run_once: true

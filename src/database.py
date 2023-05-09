@@ -95,7 +95,7 @@ class SlurmDb(MySqlDb):
             "state",
             "tres_req",
             "account",
-            "'partition'"
+            "`partition`"
         ])
 
         # Select all Jobs
@@ -150,6 +150,12 @@ class ChargebackDb(MySqlDb):
         fields = []
         values = []
         for key, value in record.items():
+
+            # Escape the partition colume. It is reserved
+            #  TODO: this needs to be implemented generically to make all fields safe
+            #        Plan to update this method to escape all input to the query.
+            if key == 'partition':
+                key = "`{}`".format(key)
             fields.append(key)
             values.append(value)
 

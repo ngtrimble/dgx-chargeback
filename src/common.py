@@ -154,7 +154,8 @@ def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable, slurmParti
     for job in jobs:
 
         # Skip the record if this partition is to be filtered
-        if slurmPartitionFilter == job["'partition'"]:
+        if slurmPartitionFilter != '' and slurmPartitionFilter == job["partition"]:
+            logger.debug("Job ID '{}' matched partition filter of '{}'. Skipping it.".format(job["id_job"],slurmPartitionFilter))
             continue
 
         time_start     = formatUnixToDateString(job["time_start"])
@@ -192,7 +193,7 @@ def parseSlurmJobs(jobs, sshHost, slurmAssocBackend, slurmAssocTable, slurmParti
             "job_result":      job_result,
             "gpus_requested":  gpus_requested,
             "gpus_used":       gpus_used,
-            "partition":       job["'partition'"]
+            "partition":       job["partition"]
         }
         chargebackRecords.append(chargebackRecord)
     

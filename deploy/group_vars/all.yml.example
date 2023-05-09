@@ -1,7 +1,7 @@
 ---
 slurm: 
   job_prev_days: 14
-  assoc_backend: alurm_acctdb
+  assoc_backend: slurm_acctdb
   partition_filter: ''
   cluster_name: 
   db: 
@@ -18,6 +18,7 @@ chargeback:
     schema_name: 
     table_name: 
   gpu_usd_cost_per_minute: 
+  cli_binary_name: charges
 ssh: 
   host: 
   port: 22

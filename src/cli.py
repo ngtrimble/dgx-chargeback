@@ -33,6 +33,35 @@ def printBasicReport(report,title):
 
     print(table)
 
+def printHelp():
+    help = """
+    ERISXDL Chargeback Report Help
+
+    This tool will report estimated GPU usage charged in ERISXDL for a user or group.
+      - Only the user/group report for the currently logged in user are allowed.
+      - Month ranges prior to today can be specified. These do not align with billing cycles.
+      - The -U option is ONLY available when run as root. Non-root users may only see thier own charges.
+    
+    Usage: charges [-u | -g] [-m <MONTHS>] [-U <USERNAME>]
+
+    Options:
+      -u:        Run report for jobs of current user only
+      -g:        Run report for job of the current users' billing group
+      -m <INT>:  Specify an integer range in months to report, prior to doday. DEFAULT=1
+      -U <STR>:  Specify an alternate user to run the report as. **Only available for root user**
+    
+    Examples:
+      Show current user's job totals/billing for the previous 3 months
+        charges -u -m 3
+
+      Show current user's billing group's totals/billing for the previous 1 month
+        charges -g
+
+      Show another user's billing totals, only when run as root
+        charges -u -U username
+    """
+    print(help)
+
 
 # Parse Args
 parser = argparse.ArgumentParser()
@@ -42,24 +71,33 @@ parser.add_argument("-m", type=int, default=1)
 parser.add_argument("-U", type=str, default=None)
 args = parser.parse_args()
 
+# Check Root
 if username == 'root':
     if args.U is not None:
         username = args.U
         print("You are root'. Run Report as User: '{}'".format(username))
     else:
-        raise("ERROR: When running as root, you must specify a username to query with -U")
-    
+        raise ValueError("ERROR: When running as root, you must specify a username to query with -U")
+
+# Verify two args aren't passed
+if args.u and args.g:
+    raise ValueError("ERROR: You must only specify '-u' or '-g'. Not both.")
+
+# Verify at least one arg is passed
 if args.u or args.g:
     print("NOTICE: These figures are estimated based on job data as of the previous 24hours")
     print("        Final billing calculations are done by the billing team at the end of each cycle")
+else:
+    printHelp()
+
+# Process arg options
 if args.u:
     # Print User Report
     printBasicReport(
         getUserReport(api_endpoint,username,args.m),
         "Estimated Usage Report"
     )
-
-if args.g:
+elif args.g:
     # Print Group Report
     printBasicReport(
         getGroupReport(api_endpoint,username,args.m),

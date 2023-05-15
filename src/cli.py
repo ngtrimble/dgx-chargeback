@@ -15,13 +15,13 @@ api_endpoint = 'http://{}:{}'.format(api_host, api_port)
 username = getpass.getuser()
 
 # Get Simple User Report
-def getUserReport(api_endpoint,username,months):
-    response = requests.get("{}/report/users/{}?months={}".format(api_endpoint,username,months))
+def getUserReport(api_endpoint,username):
+    response = requests.get("{}/report/users/{}".format(api_endpoint,username))
     return response.json()
 
 # Get Simple Group Report
-def getGroupReport(api_endpoint,username,months):
-    response = requests.get("{}/report/groups/{}?months={}".format(api_endpoint,username,months))
+def getGroupReport(api_endpoint,username):
+    response = requests.get("{}/report/groups/{}".format(api_endpoint,username))
     return response.json()
 
 # Print a Basic Key/Value Report in a Table
@@ -39,22 +39,21 @@ def printHelp():
 
     This tool will report estimated GPU usage charged in ERISXDL for a user or group.
       - Only the user/group report for the currently logged in user are allowed.
-      - Month ranges prior to today can be specified. These do not align with billing cycles.
+      - Be default, the current month to date will be reported
       - The -U option is ONLY available when run as root. Non-root users may only see thier own charges.
     
-    Usage: charges [-u | -g] [-m <MONTHS>] [-U <USERNAME>]
+    Usage: charges [-u | -g] [-U <USERNAME>]
 
     Options:
       -u:        Run report for jobs of current user only
       -g:        Run report for job of the current users' billing group
-      -m <INT>:  Specify an integer range in months to report, prior to doday. DEFAULT=1
       -U <STR>:  Specify an alternate user to run the report as. **Only available for root user**
     
     Examples:
-      Show current user's job totals/billing for the previous 3 months
-        charges -u -m 3
+      Show current user's job totals/billing for the current month
+        charges -u
 
-      Show current user's billing group's totals/billing for the previous 1 month
+      Show current user's billing group's totals/billing for the current month
         charges -g
 
       Show another user's billing totals, only when run as root
@@ -67,7 +66,6 @@ def printHelp():
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", action='store_true')
 parser.add_argument("-g", action='store_true')
-parser.add_argument("-m", type=int, default=1)
 parser.add_argument("-U", type=str, default=None)
 args = parser.parse_args()
 
@@ -94,12 +92,12 @@ else:
 if args.u:
     # Print User Report
     printBasicReport(
-        getUserReport(api_endpoint,username,args.m),
+        getUserReport(api_endpoint,username),
         "Estimated Usage Report"
     )
 elif args.g:
     # Print Group Report
     printBasicReport(
-        getGroupReport(api_endpoint,username,args.m),
+        getGroupReport(api_endpoint,username),
         "Estimated Usage Report"
     )

@@ -9,6 +9,10 @@ import re
 """
 Common and Utility functions
 """
+def filter_list_of_dictionaries(list_of_dicts, field, value):
+    filtered_list = [d for d in list_of_dicts if d.get(field) == value]
+    return filtered_list
+
 def getDateRangeUnix(dayCount):
     """
     Get start/end range in UNIX timestamps for the last n days.
@@ -112,14 +116,22 @@ def getUserSlurmAssoc(slurmAssocTable, username):
     If we are unable to find an association, raise an error
     """
     try:
-        matched_account = next((item for item in slurmAssocTable if item["user"] == username), None)
+        matched_account = filter_list_of_dictionaries(slurmAssocTable, 'user', username)
     except Exception as err:
         logger.error(err)
         pass
 
+     # If we got more than 1 result for this user, filter to only the 'default' field
     logger.debug("matched account object is '{}'".format(matched_account))
+    if matched_account is not None and len(matched_account) > 1:
+        logger.debug("Found '{}' matches, filtering to default".format(len(matched_account)))
+        matched_account = filter_list_of_dictionaries(slurmAssocTable, 'is_def', username)
+        logger.debug("default matched account object is '{}'".format(matched_account))
+
     if matched_account is not None:
-        account = matched_account.get('acct', None)
+
+        # Get the account name
+        account = matched_account[0].get('acct', None)
         if account is not None:
             return account
         else:

@@ -119,16 +119,19 @@ class SlurmDb(MySqlDb):
         """
         fields = ", ".join([
             "user",
-            "acct"
+            "acct",
+            "is_def"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._assocTable + " WHERE user <> ''"
+        # Get user associations if the user field is not null, and the user is not deleted
+        ## Get 'is_def' (is default) for filtering later
+        query = "SELECT " + fields + " FROM " + self._assocTable + " WHERE user <> '' AND deleted = 0"
         params = None
 
         logger.debug(query)
         logger.debug(params)
         result = self.readQuery(query, params)
-
+        print(result)
         return result
 
 class ChargebackDb(MySqlDb):
@@ -256,3 +259,58 @@ class ChargebackDb(MySqlDb):
 
         return result
     
+    def getUserJobsThisMonth (self, username, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND user_name = %s "
+                 "AND MONTH(time_end) = MONTH(CURDATE()) "
+                 "AND YEAR(time_end) = YEAR(CURDATE()) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            username
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+    
+    def getGroupJobsThisMonth (self, groupname, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND group_name = %s "
+                 "AND MONTH(time_end) = MONTH(CURDATE()) "
+                 "AND YEAR(time_end) = YEAR(CURDATE()) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            groupname
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result

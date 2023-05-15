@@ -32,7 +32,7 @@ class BasicReport:
         description=None
     )
     range: ReportField = ReportField(
-        name='Month Range',
+        name='Date Range',
         value=None,
         description=None
     )
@@ -78,14 +78,14 @@ class BasicReport:
     )
 
 # Report Builders
-def build_basic_report(jobs,gpu_usd_cost_per_minute,months,target_type,target_name):
+def build_basic_report(jobs,gpu_usd_cost_per_minute,range,target_type,target_name):
     
     # Calculate and build Report
     report = BasicReport()
     report.target_type.value = target_type
     report.target_name.value = target_name
     report.gpu_usd_cost_per_minute.value = gpu_usd_cost_per_minute
-    report.range.value = months
+    report.range.value = range
 
     # Calculate Job Counts
     report.total_jobs.value = int(len(jobs))
@@ -144,7 +144,7 @@ async def root():
     return {"message": "OK"}
 
 @app.get("/report/users/{user_name}")
-async def read_report_user_months(user_name: str, months: int = 1):
+async def read_report_user_range(user_name: str, range: str = 'thisMonth'):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
@@ -156,15 +156,15 @@ async def read_report_user_months(user_name: str, months: int = 1):
         env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getUserJobsInMonthRange(user_name, months, env.min_job_duration_sec)
+    jobs = chargebackDb.getUserJobsThisMonth(user_name, env.min_job_duration_sec)
 
     # Calculate and build Report
-    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, months, 'user', user_name)
+    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, range, 'user', user_name)
 
     return report
 
 @app.get("/report/groups/{user_name}")
-async def read_report_group_months(user_name: str, months: int = 1):
+async def read_report_group_range(user_name: str, range: str = 'thisMonth'):
     
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(
@@ -188,9 +188,9 @@ async def read_report_group_months(user_name: str, months: int = 1):
         env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getGroupJobsInMonthRange(group_name, months, env.min_job_duration_sec)
+    jobs = chargebackDb.getGroupJobsThisMonth(group_name, env.min_job_duration_sec)
 
     # Calculate and build Report
-    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, months, 'group', group_name)
+    report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, range, 'group', group_name)
 
     return report

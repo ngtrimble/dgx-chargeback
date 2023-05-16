@@ -144,7 +144,7 @@ async def root():
     return {"message": "OK"}
 
 @app.get("/report/users/{user_name}")
-async def read_report_user_range(user_name: str, start_date: str, end_date: str, range: str = 'thisMonth'):
+async def read_report_user_range(user_name: str, start_date: str | None = None, end_date: str | None = None, range: str = 'thisMonth'):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
@@ -170,7 +170,7 @@ async def read_report_user_range(user_name: str, start_date: str, end_date: str,
     return report
 
 @app.get("/report/groups/{user_name}")
-async def read_report_group_range(user_name: str, start_date: str, end_date: str, range: str = 'thisMonth'):
+async def read_report_group_range(user_name: str, start_date: str | None = None, end_date: str | None = None, range: str = 'thisMonth'):
     
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(

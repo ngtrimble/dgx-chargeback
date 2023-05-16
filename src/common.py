@@ -121,12 +121,14 @@ def getUserSlurmAssoc(slurmAssocTable, username):
         logger.error(err)
         pass
 
-     # If we got more than 1 result for this user, filter to only the 'default' field
+    # If we got more than 1 result for this user, filter to only the 'default' field
     logger.debug("matched account object is '{}'".format(matched_account))
     if matched_account is not None and len(matched_account) > 1:
         logger.debug("Found '{}' matches, filtering to default".format(len(matched_account)))
-        matched_account = filter_list_of_dictionaries(slurmAssocTable, 'is_def', username)
-        logger.debug("default matched account object is '{}'".format(matched_account))
+        default_account = filter_list_of_dictionaries(matched_account, 'is_def', 1)
+        if default_account is not None:
+            matched_account = default_account
+            logger.debug("default matched account object is '{}'".format(matched_account))
 
     if matched_account is not None:
 

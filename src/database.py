@@ -211,7 +211,7 @@ class ChargebackDb(MySqlDb):
 
         return result
 
-    def getUserJobsInMonthRange (self, username, months, min_job_duration_sec):
+    def getUserJobsInDateRange (self, username, start_date, end_date, min_job_duration_sec):
         """
         Get all jobs with time_end in a range
         """
@@ -222,11 +222,16 @@ class ChargebackDb(MySqlDb):
         ])
 
         # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND user_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH )) AND YEAR(time_start) > 2020"
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND user_name = %s "
+                 "AND (DATE(time_end) BETWEEN %s AND %s) "
+                 "AND YEAR(time_start) > 2020")
         params = (
             min_job_duration_sec,
             username,
-            months
+            start_date,
+            end_date
         )
 
         logger.debug(query)
@@ -235,7 +240,7 @@ class ChargebackDb(MySqlDb):
 
         return result
     
-    def getGroupJobsInMonthRange (self, groupname, months, min_job_duration_sec):
+    def getGroupJobsInDateRange (self, groupname, start_date, end_date, min_job_duration_sec):
         """
         Get all jobs with time_end in a range
         """
@@ -246,11 +251,16 @@ class ChargebackDb(MySqlDb):
         ])
 
         # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
-        query = "SELECT " + fields + " FROM " + self._chargebackTable + " WHERE duration_sec >= %s AND group_name = %s AND (time_end >= (CURDATE() - INTERVAL %s MONTH )) AND YEAR(time_start) > 2020"
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND group_name = %s "
+                 "AND (DATE(time_end) BETWEEN %s AND %s) "
+                 "AND YEAR(time_start) > 2020")
         params = (
             min_job_duration_sec,
             groupname,
-            months
+            start_date,
+            end_date
         )
 
         logger.debug(query)

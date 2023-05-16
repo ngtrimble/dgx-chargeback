@@ -3,6 +3,7 @@
 import getpass
 import socket
 import argparse
+import datetime
 import requests
 from prettytable import PrettyTable
 
@@ -66,6 +67,15 @@ def printHelp():
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", action='store_true')
 parser.add_argument("-g", action='store_true')
+# parser.add_argument("-d", action='store_true')
+# parser.add_argument(
+#         '-s',
+#         type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
+# )
+# parser.add_argument(
+#         '-e',
+#         type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
+# )
 parser.add_argument("-U", type=str, default=None)
 args = parser.parse_args()
 

@@ -144,7 +144,7 @@ async def root():
     return {"message": "OK"}
 
 @app.get("/report/users/{user_name}")
-async def read_report_user_range(user_name: str, range: str = 'thisMonth'):
+async def read_report_user_range(user_name: str, start_date: str, end_date: str, range: str = 'thisMonth'):
     
     # Setup the Chargeback DB
     chargebackDb = database.ChargebackDb(
@@ -156,7 +156,13 @@ async def read_report_user_range(user_name: str, range: str = 'thisMonth'):
         env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getUserJobsThisMonth(user_name, env.min_job_duration_sec)
+    if range == 'thisMonth':
+        jobs = chargebackDb.getUserJobsThisMonth(user_name, env.min_job_duration_sec)
+    elif range == 'dateRange':
+        jobs = chargebackDb.getUserJobsInDateRange(user_name, start_date, end_date, env.min_job_duration_sec)
+        range = "{} to {}".format(start_date, end_date)
+    else:
+        raise ValueError("Unknown range type {}".format(range))
 
     # Calculate and build Report
     report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, range, 'user', user_name)
@@ -164,7 +170,7 @@ async def read_report_user_range(user_name: str, range: str = 'thisMonth'):
     return report
 
 @app.get("/report/groups/{user_name}")
-async def read_report_group_range(user_name: str, range: str = 'thisMonth'):
+async def read_report_group_range(user_name: str, start_date: str, end_date: str, range: str = 'thisMonth'):
     
     # Setup the Slurm DB
     slurmDb = database.SlurmDb(
@@ -188,7 +194,13 @@ async def read_report_group_range(user_name: str, range: str = 'thisMonth'):
         env.chargeback_db_schema_name)
     
     # Get Completed Jobs for this user in the defined timerange
-    jobs = chargebackDb.getGroupJobsThisMonth(group_name, env.min_job_duration_sec)
+    if range == 'thisMonth':
+        jobs = chargebackDb.getGroupJobsThisMonth(group_name, env.min_job_duration_sec)
+    elif range == 'dateRange':
+        jobs = chargebackDb.getGroupJobsInDateRange(user_name, start_date, end_date, env.min_job_duration_sec)
+        range = "{} to {}".format(start_date, end_date)
+    else:
+        raise ValueError("Unknown range type {}".format(range))
 
     # Calculate and build Report
     report = build_basic_report(jobs, env.gpu_usd_cost_per_minute, range, 'group', group_name)

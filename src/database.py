@@ -94,10 +94,14 @@ class SlurmDb(MySqlDb):
             "nodes_alloc",
             "state",
             "tres_req",
-            "account"
+            "account",
+            "`partition`"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE time_end BETWEEN %s AND %s"
+        # Select all Jobs
+        #  - time_end: In the specified UNIX Timestamp range
+        #  - time_start: Greater than 0. If it is 0, the job was never executed.
+        query = "SELECT " + fields + " FROM " + self._jobTable + " WHERE (time_end BETWEEN %s AND %s) AND time_start > 0"
         params = (
             startDate,
             endDate
@@ -115,16 +119,19 @@ class SlurmDb(MySqlDb):
         """
         fields = ", ".join([
             "user",
-            "acct"
+            "acct",
+            "is_def"
         ])
 
-        query = "SELECT " + fields + " FROM " + self._assocTable + " WHERE user <> ''"
+        # Get user associations if the user field is not null, and the user is not deleted
+        ## Get 'is_def' (is default) for filtering later
+        query = "SELECT " + fields + " FROM " + self._assocTable + " WHERE user <> '' AND deleted = 0"
         params = None
 
         logger.debug(query)
         logger.debug(params)
         result = self.readQuery(query, params)
-
+        print(result)
         return result
 
 class ChargebackDb(MySqlDb):
@@ -146,6 +153,12 @@ class ChargebackDb(MySqlDb):
         fields = []
         values = []
         for key, value in record.items():
+
+            # Escape the partition colume. It is reserved
+            #  TODO: this needs to be implemented generically to make all fields safe
+            #        Plan to update this method to escape all input to the query.
+            if key == 'partition':
+                key = "`{}`".format(key)
             fields.append(key)
             values.append(value)
 
@@ -174,3 +187,140 @@ class ChargebackDb(MySqlDb):
         else:
             logger.info("No Update needed, slurm_job_id=" + str(record["slurm_id_job"]) + " already exists")
             return False
+        
+    def getLatestJobs (self, limit):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "job_id",
+            "slurm_job_name",
+            "time_start",
+            "time_end",
+            "user_name"
+        ])
+
+        query = "SELECT " + fields + " FROM " + self._chargebackTable + " ORDER BY job_id DESC LIMIT %s"
+        params = (
+            limit,
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+
+    def getUserJobsInDateRange (self, username, start_date, end_date, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND user_name = %s "
+                 "AND (DATE(time_end) BETWEEN %s AND %s) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            username,
+            start_date,
+            end_date
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+    
+    def getGroupJobsInDateRange (self, groupname, start_date, end_date, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND group_name = %s "
+                 "AND (DATE(time_end) BETWEEN %s AND %s) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            groupname,
+            start_date,
+            end_date
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+    
+    def getUserJobsThisMonth (self, username, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND user_name = %s "
+                 "AND MONTH(time_end) = MONTH(CURDATE()) "
+                 "AND YEAR(time_end) = YEAR(CURDATE()) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            username
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result
+    
+    def getGroupJobsThisMonth (self, groupname, min_job_duration_sec):
+        """
+        Get all jobs with time_end in a range
+        """
+        fields = ", ".join([
+            "duration_sec",
+            "gpus_used",
+            "job_result"
+        ])
+
+        # Hardcode min year to 2020. This resolves some existing issues where time_start is set to 1970
+        query = ("SELECT " + fields + " FROM " + self._chargebackTable + " "
+                 "WHERE duration_sec >= %s "
+                 "AND group_name = %s "
+                 "AND MONTH(time_end) = MONTH(CURDATE()) "
+                 "AND YEAR(time_end) = YEAR(CURDATE()) "
+                 "AND YEAR(time_start) > 2020")
+        params = (
+            min_job_duration_sec,
+            groupname
+        )
+
+        logger.debug(query)
+        logger.debug(params)
+        result = self.readQuery(query, params)
+
+        return result

@@ -18,6 +18,7 @@ CREATE TABLE `gpu_usage` (
 	`gpus_requested` INT(2) NULL DEFAULT '0' COMMENT 'Number of GPUs Requested',
 	`gpus_used` INT(2) NULL DEFAULT '0' COMMENT 'Number of GPUs Used',
 	`added` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Datetime when this record was added',
+	`partition` CHAR(128) NOT NULL DEFAULT '' COMMENT 'Slurm Partition Name' COLLATE 'latin1_swedish_ci'
 	PRIMARY KEY (`job_id`) USING BTREE
 )
 COLLATE='latin1_swedish_ci'

@@ -1,0 +1,45 @@
+---
+slurm: 
+  job_prev_days: 14
+  assoc_backend: slurm_acctdb
+  partition_filter: ''
+  cluster_name: 
+  db: 
+    host: 
+    port: 3306
+    username: 
+    password: 
+chargeback: 
+  db: 
+    host: 
+    port: 3306
+    username: 
+    password: 
+    schema_name: 
+    table_name: 
+  gpu_usd_cost_per_minute: 
+  cli_binary_name: charges
+ssh: 
+  host: 
+  port: 22
+  username: 
+  password: 
+  file_cleanup: False
+email: 
+  smtp: 
+    host: 
+    port: 
+    username: 
+    password: 
+  to: 
+    address: 'User <user.name@example.com>'
+  from: 
+    address: 'DGX Chargeback <no-reply@example.com>'
+kubernetes:
+  namespace: default
+  cleanup_temp_manifest: False
+  cronjob:
+    image: docker.io/kalenpeterson/dgx-chargeback:build-19
+  api: 
+    replicas: 1
+    image: docker.io/kalenpeterson/dgx-chargeback:build-19

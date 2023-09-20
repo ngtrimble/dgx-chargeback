@@ -100,3 +100,8 @@ ENV/
 
 # Remove Shell Tests
 tests/
+
+# Remove Ansible files
+inventory
+all.yml
+*.env

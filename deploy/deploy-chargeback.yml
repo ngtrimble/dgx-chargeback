@@ -1,0 +1,81 @@
+---
+- name: Deploy Chargeback Kubernetes Resources
+  hosts: provision
+  gather_facts: no
+    
+  tasks:
+  - name: Create Tempfile for Kube Manifest
+    tempfile:
+      state: file
+      suffix: temp
+    register: temp_kube_manifest
+    notify: Cleanup Tempfile
+
+  - name: Generate the Manifest from Template
+    template:
+      src: templates/kubernetes.yml.j2
+      dest: "{{ temp_kube_manifest.path }}"
+
+  - name: Apply Deployment
+    shell: |
+      kubectl apply -n "{{ kubernetes.namespace }}" -f "{{ temp_kube_manifest.path }}"
+    register: kubectl_out
+
+  - name: Print Kubectl Apply Output
+    debug:
+      var: kubectl_out.stdout
+    
+  handlers:
+  - name: Cleanup Tempfile
+    file:
+      state: absent
+      path: "{{ temp_kube_manifest }}"
+    when: temp_kube_manifest.path is defined and
+          kubernetes.cleanup_temp_manifest is true
+
+- name: Deploy Chargeback Client Resources
+  hosts: mgmt
+  gather_facts: no
+    
+  tasks:
+  - name: Install Python3 Devel
+    yum:
+      name: python3-devel
+      state: present
+    become: yes
+    delegate_to: localhost
+    run_once: true
+
+  - name: Install Python requirements
+    pip:
+      executable: pip3
+      name:
+        - requests
+        - prettytable
+        - cython
+    become: yes
+
+  - name: Compile Python to C Binary
+    shell: |
+      cython --embed -o /tmp/{{ chargeback.cli_binary_name }}.c ../src/cli.py
+      gcc -Os -I /usr/include/python3.6m -o /tmp/{{ chargeback.cli_binary_name }} /tmp/{{ chargeback.cli_binary_name }}.c -lpython3.6m -lpthread -lm -lutil -ldl
+    delegate_to: localhost
+    run_once: true
+
+  - name: Copy Binary to path
+    copy:
+      src: /tmp/{{ chargeback.cli_binary_name }}
+      dest: /usr/local/bin/{{ chargeback.cli_binary_name }}
+      mode: 755
+      owner: root
+    become: yes
+
+  - name: Cleanup Temp Files
+    file:
+      path: '{{ item }}'
+      state: absent
+    loop:
+      - /tmp/{{ chargeback.cli_binary_name }}
+      - /tmp/{{ chargeback.cli_binary_name }}.c
+    delegate_to: localhost
+    run_once: true

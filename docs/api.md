@@ -1,6 +1,9 @@
 # Chargeback API
 The Chargeback REST API is used to query the back-end chargeback DB for user's usage metrics. It should only be used via the CLI to ensure user permissions are enforced.
 
+## Usage
+See the OpenAPI Docs section below regarding usage of the API. There is also an [openapi.json](openapi.json) included for reference.
+
 ## OpenAPI Docs
 ### /
 

@@ -78,15 +78,22 @@ class Ssh:
         Map the UID to Username via the collected /etc/passwd file
         """
 
+        # 2024/10/22 RGK: skip the record if user's id has already expired in this billing cycle.
         username = None
-        user_record = pwd.getpwuid(uid)
-        username = user_record.pw_name
+        try:
+            user_record = pwd.getpwuid(uid)
+            username = user_record.pw_name
+        except Exception as err:
+            logger.error(err)
+            pass
 
         if username:
             logger.debug("Mapped UID '{}' to Username '{}'".format(uid, username))
             return str(username)
         else:
-            raise Exception('Failed to map UID to user')
+            #raise Exception('Failed to map UID to user')
+            logger.error("Failed to map UID to user")
+            return 'UNKNOWN'
 
     def mapUsernametoGroups(self, username):
         """
